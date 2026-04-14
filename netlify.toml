@@ -1,0 +1,14 @@
+# Netlify build configuration for Flutter Web
+[build]
+  # Install Flutter stable, enable web, get deps, build release
+  command = "if cd flutter; then git pull && cd ..; else git clone https://github.com/flutter/flutter.git -b stable --depth 1; fi && ./flutter/bin/flutter config --enable-web && ./flutter/bin/flutter pub get && ./flutter/bin/flutter build web --release"
+  publish = "build/web"
+
+[build.environment]
+  FLUTTER_ROOT = "flutter"
+
+# SPA fallback: all routes serve index.html so Flutter router can handle them
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
