@@ -145,8 +145,8 @@ class CrearUsuarioModel extends FlutterFlowModel<CrearUsuarioWidget> {
   TextEditingController? password2TextController;
   late bool password2Visibility;
   String? Function(BuildContext, String?)? password2TextControllerValidator;
-  // Stores action output result for [Backend Call - API (createUser)] action in Button widget.
-  ApiCallResponse? usuarioCreddo;
+  // UUID del usuario creado en Supabase Auth.
+  String? usuarioCreddo;
 
   @override
   void initState(BuildContext context) {

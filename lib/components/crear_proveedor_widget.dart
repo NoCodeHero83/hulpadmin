@@ -2894,16 +2894,57 @@ class _CrearProveedorWidgetState extends State<CrearProveedorWidget> {
                               if (_model.tipocuentaValue == null) {
                                 return;
                               }
-                              if (_model.serviciosid.length != 0) {
-                                _model.creado = await actions.createUser(
-                                  _model.correo1TextController.text,
-                                  _model.password1TextController.text,
-                                );
-                                if ((_model.creado != null &&
-                                        _model.creado != '') &&
-                                    (_model.password1TextController.text ==
-                                        _model.password2TextController.text)) {
-                                  await UsuariosTable().insert({
+
+                              Future<void> _mostrarError(String mensaje) =>
+                                  showDialog(
+                                    context: context,
+                                    builder: (dialogContext) => Dialog(
+                                      elevation: 0,
+                                      insetPadding: EdgeInsets.zero,
+                                      backgroundColor: Colors.transparent,
+                                      alignment: AlignmentDirectional(0.0, 0.0)
+                                          .resolve(Directionality.of(context)),
+                                      child: Notificacion2Widget(
+                                        titulo: 'Error',
+                                        texto: mensaje,
+                                        boton: 'Aceptar',
+                                        succes: false,
+                                        action: () async {
+                                          Navigator.pop(context);
+                                        },
+                                      ),
+                                    ),
+                                  );
+
+                              if (_model.serviciosid.isEmpty) {
+                                await _mostrarError(
+                                    'Debes seleccionar mínimo un servicio');
+                                safeSetState(() {});
+                                return;
+                              }
+
+                              if (_model.password1TextController.text !=
+                                  _model.password2TextController.text) {
+                                await _mostrarError(
+                                    'Las contraseñas no coinciden');
+                                safeSetState(() {});
+                                return;
+                              }
+
+                              _model.creado = await actions.createUser(
+                                _model.correo1TextController.text,
+                                _model.password1TextController.text,
+                              );
+
+                              if (_model.creado == null ||
+                                  _model.creado!.isEmpty) {
+                                await _mostrarError(
+                                    'No se pudo crear el usuario. Verifica el correo e intenta de nuevo.');
+                                safeSetState(() {});
+                                return;
+                              }
+
+                              await UsuariosTable().insert({
                                     'id': _model.creado,
                                     'nombres': _model.nombreTextController.text,
                                     'apellidos':
@@ -2981,55 +3022,6 @@ class _CrearProveedorWidgetState extends State<CrearProveedorWidget> {
                                       ),
                                     },
                                   );
-                                } else {
-                                  await showDialog(
-                                    context: context,
-                                    builder: (dialogContext) {
-                                      return Dialog(
-                                        elevation: 0,
-                                        insetPadding: EdgeInsets.zero,
-                                        backgroundColor: Colors.transparent,
-                                        alignment:
-                                            AlignmentDirectional(0.0, 0.0)
-                                                .resolve(
-                                                    Directionality.of(context)),
-                                        child: Notificacion2Widget(
-                                          titulo: 'Error',
-                                          texto: 'Completa todos los campos',
-                                          boton: 'Aceptar',
-                                          succes: false,
-                                          action: () async {
-                                            Navigator.pop(context);
-                                          },
-                                        ),
-                                      );
-                                    },
-                                  );
-                                }
-                              } else {
-                                await showDialog(
-                                  context: context,
-                                  builder: (dialogContext) {
-                                    return Dialog(
-                                      elevation: 0,
-                                      insetPadding: EdgeInsets.zero,
-                                      backgroundColor: Colors.transparent,
-                                      alignment: AlignmentDirectional(0.0, 0.0)
-                                          .resolve(Directionality.of(context)),
-                                      child: Notificacion2Widget(
-                                        titulo: 'Error',
-                                        texto:
-                                            'Debes seleccionar mínimo un servicio',
-                                        boton: 'Aceptar',
-                                        succes: false,
-                                        action: () async {
-                                          Navigator.pop(context);
-                                        },
-                                      ),
-                                    );
-                                  },
-                                );
-                              }
 
                               safeSetState(() {});
                             },

@@ -1,5 +1,5 @@
-import '/backend/api_requests/api_calls.dart';
 import '/backend/supabase/supabase.dart';
+import '/custom_code/actions/index.dart' as actions;
 import '/components/notificacion2_widget.dart';
 import '/flutter_flow/flutter_flow_drop_down.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -2235,79 +2235,40 @@ class _CrearUsuarioWidgetState extends State<CrearUsuarioWidget> {
                               if (_model.paisValue == null) {
                                 return;
                               }
-                              _model.usuarioCreddo = await CreateUserCall.call(
-                                email: _model.correo1TextController.text,
-                                password: _model.password1TextController.text ==
-                                            null ||
-                                        _model.password1TextController.text ==
-                                            ''
-                                    ? functions.generateUUIDv4()
-                                    : valueOrDefault<String>(
-                                        _model.password1TextController.text,
-                                        '000000',
-                                      ),
-                              );
 
-                              _shouldSetState = true;
-                              if ((_model.password1TextController.text !=
-                                          null &&
-                                      _model.password1TextController.text !=
-                                          '') ||
-                                  (_model.password2TextController.text !=
-                                          null &&
-                                      _model.password2TextController.text !=
-                                          '')) {
-                                if (_model.password1TextController.text ==
-                                    _model.password2TextController.text) {
-                                  await UsuariosTable().insert({
-                                    'codigo_pais': '+57',
-                                    'nombres': _model.nombreTextController.text,
-                                    'apellidos':
-                                        _model.apellidoTextController.text,
-                                    'tipo_documento': _model.tipodocumentoValue,
-                                    'numero_documento': _model
-                                        .numerodocumentoTextController.text,
-                                    'pais': _model.paisValue,
-                                    'ciudad': _model.ciudadValue,
-                                    'direccion':
-                                        _model.direccionTextController.text,
-                                    'telefono':
-                                        _model.telefonoTextController.text,
-                                    'correo_electronico':
-                                        _model.correo1TextController.text,
-                                    'rol': 'usuario',
-                                    'fecha_registro': supaSerialize<DateTime>(
-                                        getCurrentTimestamp),
-                                    'id': getJsonField(
-                                      (_model.usuarioCreddo?.jsonBody ?? ''),
-                                      r'''$.uid''',
-                                    ).toString(),
-                                  });
-                                  Navigator.pop(context);
-                                } else {
-                                  await showDialog(
-                                    context: context,
-                                    builder: (dialogContext) {
-                                      return Dialog(
-                                        elevation: 0,
-                                        insetPadding: EdgeInsets.zero,
-                                        backgroundColor: Colors.transparent,
-                                        alignment:
-                                            AlignmentDirectional(0.0, 0.0)
-                                                .resolve(
-                                                    Directionality.of(context)),
-                                        child: Notificacion2Widget(
-                                          titulo: 'Error',
-                                          texto: 'Las contraseñas no coinciden',
-                                          boton: 'Aceptar',
-                                          succes: false,
-                                          action: () async {},
-                                        ),
-                                      );
-                                    },
-                                  );
-                                }
-                              } else {
+                              final password1 =
+                                  _model.password1TextController.text;
+                              final password2 =
+                                  _model.password2TextController.text;
+                              final esUsuarioExterno =
+                                  (password1 == '') && (password2 == '');
+
+                              if (!esUsuarioExterno &&
+                                  password1 != password2) {
+                                await showDialog(
+                                  context: context,
+                                  builder: (dialogContext) {
+                                    return Dialog(
+                                      elevation: 0,
+                                      insetPadding: EdgeInsets.zero,
+                                      backgroundColor: Colors.transparent,
+                                      alignment: AlignmentDirectional(0.0, 0.0)
+                                          .resolve(
+                                              Directionality.of(context)),
+                                      child: Notificacion2Widget(
+                                        titulo: 'Error',
+                                        texto: 'Las contraseñas no coinciden',
+                                        boton: 'Aceptar',
+                                        succes: false,
+                                        action: () async {},
+                                      ),
+                                    );
+                                  },
+                                );
+                                return;
+                              }
+
+                              if (esUsuarioExterno) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(
@@ -2322,35 +2283,68 @@ class _CrearUsuarioWidgetState extends State<CrearUsuarioWidget> {
                                         FlutterFlowTheme.of(context).primary,
                                   ),
                                 );
-                                await UsuariosTable().insert({
-                                  'id': getJsonField(
-                                    (_model.usuarioCreddo?.jsonBody ?? ''),
-                                    r'''$.uid''',
-                                  ).toString(),
-                                  'nombres': _model.nombreTextController.text,
-                                  'apellidos':
-                                      _model.apellidoTextController.text,
-                                  'tipo_documento': _model.tipodocumentoValue,
-                                  'numero_documento':
-                                      _model.numerodocumentoTextController.text,
-                                  'pais': _model.paisValue,
-                                  'ciudad': _model.ciudadValue,
-                                  'direccion':
-                                      _model.direccionTextController.text,
-                                  'telefono':
-                                      _model.telefonoTextController.text,
-                                  'correo_electronico':
-                                      _model.correo1TextController.text,
-                                  'rol': 'usuario',
-                                  'fecha_registro': supaSerialize<DateTime>(
-                                      getCurrentTimestamp),
-                                  'codigo_pais': '+57',
-                                  'usuario_externo': true,
-                                });
-                                Navigator.pop(context);
+                              }
+
+                              _model.usuarioCreddo = await actions.createUser(
+                                _model.correo1TextController.text,
+                                password1.isEmpty
+                                    ? functions.generateUUIDv4()
+                                    : password1,
+                              );
+                              _shouldSetState = true;
+
+                              if (_model.usuarioCreddo == null ||
+                                  _model.usuarioCreddo!.isEmpty) {
+                                await showDialog(
+                                  context: context,
+                                  builder: (dialogContext) {
+                                    return Dialog(
+                                      elevation: 0,
+                                      insetPadding: EdgeInsets.zero,
+                                      backgroundColor: Colors.transparent,
+                                      alignment: AlignmentDirectional(0.0, 0.0)
+                                          .resolve(
+                                              Directionality.of(context)),
+                                      child: Notificacion2Widget(
+                                        titulo: 'Error',
+                                        texto:
+                                            'No se pudo crear el usuario. Verifica el correo e intenta de nuevo.',
+                                        boton: 'Aceptar',
+                                        succes: false,
+                                        action: () async {},
+                                      ),
+                                    );
+                                  },
+                                );
                                 if (_shouldSetState) safeSetState(() {});
                                 return;
                               }
+
+                              final datosUsuario = <String, dynamic>{
+                                'id': _model.usuarioCreddo,
+                                'codigo_pais': '+57',
+                                'nombres': _model.nombreTextController.text,
+                                'apellidos':
+                                    _model.apellidoTextController.text,
+                                'tipo_documento': _model.tipodocumentoValue,
+                                'numero_documento': _model
+                                    .numerodocumentoTextController.text,
+                                'pais': _model.paisValue,
+                                'ciudad': _model.ciudadValue,
+                                'direccion':
+                                    _model.direccionTextController.text,
+                                'telefono':
+                                    _model.telefonoTextController.text,
+                                'correo_electronico':
+                                    _model.correo1TextController.text,
+                                'rol': 'usuario',
+                                'fecha_registro': supaSerialize<DateTime>(
+                                    getCurrentTimestamp),
+                                if (esUsuarioExterno) 'usuario_externo': true,
+                              };
+
+                              await UsuariosTable().insert(datosUsuario);
+                              Navigator.pop(context);
 
                               if (_shouldSetState) safeSetState(() {});
                             },

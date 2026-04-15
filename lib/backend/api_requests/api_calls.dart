@@ -119,34 +119,6 @@ class SenNotificationUserHulpCall {
   }
 }
 
-class CreateUserCall {
-  static Future<ApiCallResponse> call({
-    String? email = '',
-    String? password = '',
-  }) async {
-    final ffApiRequestBody = '''
-{
-  "email": "${escapeStringForJson(email)}",
-  "password": "${escapeStringForJson(password)}"
-}''';
-    return ApiManager.instance.makeApiCall(
-      callName: 'createUser',
-      apiUrl: 'https://hulp-api.vercel.app/create-user',
-      callType: ApiCallType.POST,
-      headers: {},
-      params: {},
-      body: ffApiRequestBody,
-      bodyType: BodyType.JSON,
-      returnBody: true,
-      encodeBodyUtf8: false,
-      decodeUtf8: false,
-      cache: false,
-      isStreamingApi: false,
-      alwaysAllowBody: false,
-    );
-  }
-}
-
 class ApiPagingParams {
   int nextPageNumber = 0;
   int numItems = 0;
