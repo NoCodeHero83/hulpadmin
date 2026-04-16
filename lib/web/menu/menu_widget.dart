@@ -384,6 +384,10 @@ class _MenuWidgetState extends State<MenuWidget> {
                 ),
               ],
             ),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
             Flexible(
               child: MouseRegion(
                 opaque: false,
@@ -458,6 +462,29 @@ class _MenuWidgetState extends State<MenuWidget> {
                   safeSetState(() => _model.mouseRegionHovered = false);
                 }),
               ),
+            ),
+                Padding(
+                  padding: EdgeInsetsDirectional.fromSTEB(0.0, 8.0, 0.0, 4.0),
+                  child: Text(
+                    FFAppState().MenuAbierto ? 'v1.0.1 · 2026-04-15' : 'v1.0.1',
+                    style: FlutterFlowTheme.of(context).bodySmall.override(
+                          font: GoogleFonts.inter(
+                            fontStyle: FlutterFlowTheme.of(context)
+                                .bodySmall
+                                .fontStyle,
+                          ),
+                          color: FlutterFlowTheme.of(context)
+                              .secondaryBackground
+                              .withOpacity(0.6),
+                          fontSize: 11.0,
+                          letterSpacing: 0.0,
+                          fontStyle: FlutterFlowTheme.of(context)
+                              .bodySmall
+                              .fontStyle,
+                        ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

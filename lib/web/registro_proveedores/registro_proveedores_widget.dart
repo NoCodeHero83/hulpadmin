@@ -93,13 +93,18 @@ class _RegistroProveedoresWidgetState extends State<RegistroProveedoresWidget> {
                           'subcategoria_id',
                           'categoria_id'
                         ])
-                        .neqOrNull(
+                        .eqOrNull(
                           'verificado',
-                          'no verificado',
+                          'pendiente',
                         )
-                        .map((list) => list
-                            .map((item) => VwProfesionalesCompletoRow(item))
-                            .toList()),
+                        .map((list) {
+                          final rows = list
+                              .map((item) => VwProfesionalesCompletoRow(item))
+                              .toList();
+                          rows.sort((a, b) => (b.fechaRegistro ?? DateTime(0))
+                              .compareTo(a.fechaRegistro ?? DateTime(0)));
+                          return rows;
+                        }),
                     builder: (context, snapshot) {
                       // Customize what your widget looks like when it's loading.
                       if (!snapshot.hasData) {
@@ -324,10 +329,12 @@ class _RegistroProveedoresWidgetState extends State<RegistroProveedoresWidget> {
                                               'nombres',
                                               '%${_model.textController.text}%',
                                             )
-                                            .neqOrNull(
+                                            .eqOrNull(
                                               'verificado',
-                                              'no verificado',
-                                            ),
+                                              'pendiente',
+                                            )
+                                            .order('fecha_registro',
+                                                ascending: false),
                                       )))
                                     .future,
                                 builder: (context, snapshot) {
@@ -714,14 +721,14 @@ class _RegistroProveedoresWidgetState extends State<RegistroProveedoresWidget> {
                                                                   ''
                                                           ? containerfiltroVwProfesionalesCompletoRowList
                                                               .unique((e) => e
-                                                                  .categoriaNombre!)
+                                                                  .categoriaNombre ?? '')
                                                               .map((e) => e
                                                                   .categoriaNombre)
                                                               .withoutNulls
                                                               .toList()
                                                           : containersinfiltroVwProfesionalesCompletoRowList
                                                               .unique((e) => e
-                                                                  .categoriaNombre!)
+                                                                  .categoriaNombre ?? '')
                                                               .map((e) => e
                                                                   .categoriaNombre)
                                                               .withoutNulls
@@ -888,7 +895,7 @@ class _RegistroProveedoresWidgetState extends State<RegistroProveedoresWidget> {
                                                                               'pendiente')
                                                                           .toList()
                                                                           .unique((e) =>
-                                                                              e.profesionalId!)
+                                                                              e.profesionalId ?? '')
                                                                           .length
                                                                           .toString(),
                                                                       '0',
@@ -1028,7 +1035,7 @@ class _RegistroProveedoresWidgetState extends State<RegistroProveedoresWidget> {
                                                                         valueOrDefault<
                                                                             String>(
                                                                           textVwProfesionalesCompletoRowList
-                                                                              .unique((e) => e.profesionalId!)
+                                                                              .unique((e) => e.profesionalId ?? '')
                                                                               .length
                                                                               .toString(),
                                                                           '0',
@@ -1123,7 +1130,7 @@ class _RegistroProveedoresWidgetState extends State<RegistroProveedoresWidget> {
                                                                         valueOrDefault<
                                                                             String>(
                                                                           textVwProfesionalesCompletoRowList
-                                                                              .unique((e) => e.profesionalId!)
+                                                                              .unique((e) => e.profesionalId ?? '')
                                                                               .length
                                                                               .toString(),
                                                                           '0',
@@ -1188,7 +1195,7 @@ class _RegistroProveedoresWidgetState extends State<RegistroProveedoresWidget> {
                                                                     .categoriaNombre)
                                                             .toList()
                                                             .unique((e) => e
-                                                                .profesionalId!);
+                                                                .profesionalId ?? '');
                                                       } else if (_model
                                                                   .dropDownValue !=
                                                               null &&
@@ -1201,7 +1208,7 @@ class _RegistroProveedoresWidgetState extends State<RegistroProveedoresWidget> {
                                                                     .dropDownValue)
                                                             .toList()
                                                             .unique((e) => e
-                                                                .profesionalId!);
+                                                                .profesionalId ?? '');
                                                       } else if (_model
                                                                   .textController
                                                                   .text !=
@@ -1211,11 +1218,11 @@ class _RegistroProveedoresWidgetState extends State<RegistroProveedoresWidget> {
                                                               '') {
                                                         return containerfiltroVwProfesionalesCompletoRowList
                                                             .unique((e) => e
-                                                                .profesionalId!);
+                                                                .profesionalId ?? '');
                                                       } else {
                                                         return containersinfiltroVwProfesionalesCompletoRowList
                                                             .unique((e) => e
-                                                                .profesionalId!);
+                                                                .profesionalId ?? '');
                                                       }
                                                     }()
                                                             .toList();
@@ -1642,7 +1649,7 @@ class _RegistroProveedoresWidgetState extends State<RegistroProveedoresWidget> {
                                                                   proveedoresDatosIndex,
                                                               proveedorId:
                                                                   proveedoresDatosItem
-                                                                      .profesionalId!,
+                                                                      .profesionalId ?? '',
                                                               actionnavegacion:
                                                                   () async {
                                                                 if (Navigator.of(
@@ -1719,7 +1726,7 @@ class _RegistroProveedoresWidgetState extends State<RegistroProveedoresWidget> {
                                                                             },
                                                                             child:
                                                                                 RechazarProveedorWidget(
-                                                                              proveedorId: proveedoresDatosItem.profesionalId!,
+                                                                              proveedorId: proveedoresDatosItem.profesionalId ?? '',
                                                                             ),
                                                                           ),
                                                                         );
@@ -1771,7 +1778,7 @@ class _RegistroProveedoresWidgetState extends State<RegistroProveedoresWidget> {
                                                                             },
                                                                             child:
                                                                                 AceptarProveedorWidget(
-                                                                              idproveedor: proveedoresDatosItem.profesionalId!,
+                                                                              idproveedor: proveedoresDatosItem.profesionalId ?? '',
                                                                             ),
                                                                           ),
                                                                         );
@@ -1823,7 +1830,7 @@ class _RegistroProveedoresWidgetState extends State<RegistroProveedoresWidget> {
                                                                             },
                                                                             child:
                                                                                 InformacionProveedorWidget(
-                                                                              proveedorId: proveedoresDatosItem.profesionalId!,
+                                                                              proveedorId: proveedoresDatosItem.profesionalId ?? '',
                                                                             ),
                                                                           ),
                                                                         );
