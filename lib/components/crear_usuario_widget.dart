@@ -2340,7 +2340,7 @@ class _CrearUsuarioWidgetState extends State<CrearUsuarioWidget> {
                                 'rol': 'usuario',
                                 'fecha_registro': supaSerialize<DateTime>(
                                     getCurrentTimestamp),
-                                if (esUsuarioExterno) 'usuario_externo': true,
+                                'usuario_externo': true,
                               };
 
                               await UsuariosTable().insert(datosUsuario);

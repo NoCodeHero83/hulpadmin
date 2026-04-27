@@ -1,12 +1,9 @@
 import 'package:supabase_flutter/supabase_flutter.dart' hide Provider;
 import '/flutter_flow/flutter_flow_util.dart';
+import '/environment_values.dart';
 
 export 'database/database.dart';
 export 'storage/storage.dart';
-
-const String kSupabaseUrl = 'https://zexegravzidwloxeimxx.supabase.co';
-const String kSupabaseAnonKey =
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpleGVncmF2emlkd2xveGVpbXh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5NTc3MjgsImV4cCI6MjA1NzUzMzcyOH0.KK3zDu42x5q7ehC_jUXtnzIvlHVzz8hAsI-ybE0xZ9E';
 
 class SupaFlow {
   SupaFlow._();
@@ -18,11 +15,11 @@ class SupaFlow {
   static SupabaseClient get client => instance._supabase;
 
   static Future initialize() => Supabase.initialize(
-        url: kSupabaseUrl,
+        url: FFDevEnvironmentValues().supabaseUrl,
         headers: {
           'X-Client-Info': 'flutterflow',
         },
-        anonKey: kSupabaseAnonKey,
+        anonKey: FFDevEnvironmentValues().supabaseAnonKey,
         debug: false,
         authOptions:
             FlutterAuthClientOptions(authFlowType: AuthFlowType.implicit),

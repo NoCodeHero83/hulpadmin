@@ -1732,6 +1732,133 @@ class _CrearServicioWidgetState extends State<CrearServicioWidget> {
                         ].divide(SizedBox(height: 8.0)),
                       ),
                     ),
+                    if (_model.items.isNotEmpty)
+                      Padding(
+                        padding: EdgeInsetsDirectional.fromSTEB(
+                            0.0, 20.0, 0.0, 0.0),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.max,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Items incluidos',
+                              style: FlutterFlowTheme.of(context)
+                                  .bodyMedium
+                                  .override(
+                                    font: GoogleFonts.inter(
+                                      fontWeight: FontWeight.normal,
+                                      fontStyle:
+                                          FlutterFlowTheme.of(context)
+                                              .bodyMedium
+                                              .fontStyle,
+                                    ),
+                                    fontSize: 16.0,
+                                    letterSpacing: 0.0,
+                                    fontWeight: FontWeight.normal,
+                                    fontStyle: FlutterFlowTheme.of(context)
+                                        .bodyMedium
+                                        .fontStyle,
+                                  ),
+                            ),
+                            Padding(
+                              padding: EdgeInsetsDirectional.fromSTEB(
+                                  0.0, 8.0, 0.0, 0.0),
+                              child: Builder(
+                                builder: (context) {
+                                  final itemss = _model.items.toList();
+                                  return Column(
+                                    mainAxisSize: MainAxisSize.max,
+                                    children: List.generate(itemss.length,
+                                        (itemssIndex) {
+                                      final itemssItem =
+                                          itemss[itemssIndex];
+                                      return Row(
+                                        mainAxisSize: MainAxisSize.max,
+                                        children: [
+                                          Flexible(
+                                            child: Row(
+                                              mainAxisSize:
+                                                  MainAxisSize.max,
+                                              children: [
+                                                Icon(
+                                                  Icons
+                                                      .check_circle_outline,
+                                                  color:
+                                                      FlutterFlowTheme.of(
+                                                              context)
+                                                          .primaryText,
+                                                  size: 24.0,
+                                                ),
+                                                Text(
+                                                  itemssItem,
+                                                  style:
+                                                      FlutterFlowTheme.of(
+                                                              context)
+                                                          .bodyMedium
+                                                          .override(
+                                                            font:
+                                                                GoogleFonts
+                                                                    .inter(
+                                                              fontWeight: FlutterFlowTheme.of(
+                                                                      context)
+                                                                  .bodyMedium
+                                                                  .fontWeight,
+                                                              fontStyle: FlutterFlowTheme.of(
+                                                                      context)
+                                                                  .bodyMedium
+                                                                  .fontStyle,
+                                                            ),
+                                                            letterSpacing:
+                                                                0.0,
+                                                          ),
+                                                ),
+                                              ].divide(
+                                                  SizedBox(width: 8.0)),
+                                            ),
+                                          ),
+                                          InkWell(
+                                            splashColor: Colors.transparent,
+                                            focusColor: Colors.transparent,
+                                            hoverColor: Colors.transparent,
+                                            highlightColor:
+                                                Colors.transparent,
+                                            onTap: () async {
+                                              _model.removeAtIndexFromItems(
+                                                  itemssIndex);
+                                              safeSetState(() {});
+                                            },
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                color: Color(0xFFD80715),
+                                                borderRadius:
+                                                    BorderRadius.circular(
+                                                        4.0),
+                                              ),
+                                              child: Padding(
+                                                padding:
+                                                    EdgeInsetsDirectional
+                                                        .fromSTEB(8.0, 4.0,
+                                                            8.0, 4.0),
+                                                child: Icon(
+                                                  Icons.delete_forever,
+                                                  color: FlutterFlowTheme
+                                                          .of(context)
+                                                      .secondaryBackground,
+                                                  size: 16.0,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ].divide(SizedBox(width: 16.0)),
+                                      );
+                                    }).divide(SizedBox(height: 12.0)),
+                                  );
+                                },
+                              ),
+                            ),
+                          ].divide(SizedBox(height: 8.0)),
+                        ),
+                      ),
                     Row(
                       mainAxisSize: MainAxisSize.max,
                       children: [

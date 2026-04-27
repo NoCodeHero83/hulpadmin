@@ -38,6 +38,8 @@ class _SolicitudesWidgetState extends State<SolicitudesWidget> {
   late SolicitudesModel _model;
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
+  StreamSubscription<List<Map<String, dynamic>>>? _solicitudesTriggerSub;
+
   @override
   void initState() {
     super.initState();
@@ -49,10 +51,22 @@ class _SolicitudesWidgetState extends State<SolicitudesWidget> {
       await _model.waitForRequestCompleted();
     });
     WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
+
+    _solicitudesTriggerSub = SupaFlow.client
+        .from('solicitudes_servicio')
+        .stream(primaryKey: ['id'])
+        .listen((_) {
+      if (!mounted) return;
+      safeSetState(() {
+        _model.containerSupabaseStream = null;
+        _model.requestCompleter = null;
+      });
+    });
   }
 
   @override
   void dispose() {
+    _solicitudesTriggerSub?.cancel();
     _model.dispose();
     super.dispose();
   }

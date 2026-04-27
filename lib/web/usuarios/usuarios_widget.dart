@@ -1517,9 +1517,9 @@ class _UsuariosWidgetState extends State<UsuariosWidget> {
                                                                       String>(
                                                                     textUsuariosRow?.usuarioExterno !=
                                                                             true
-                                                                        ? 'Aplicacion'
+                                                                        ? 'Aplicativo'
                                                                         : 'Externo',
-                                                                    'Aplicacion',
+                                                                    'Aplicativo',
                                                                   ),
                                                                   style: FlutterFlowTheme.of(
                                                                           context)

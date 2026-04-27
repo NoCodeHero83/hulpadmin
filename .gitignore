@@ -40,8 +40,11 @@
 # lead to leaking of private certificates to your repository, which is no bueno.
 .firebase/
 
+# Environment / credentials
+assets/environment_values/environment.json
+assets/environment_values/environment_test.json
+
 # Web related
-lib/generated_plugin_registrant.dart
 
 # Symbolication related
 app.*.symbols
@@ -53,3 +56,5 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+.vercel

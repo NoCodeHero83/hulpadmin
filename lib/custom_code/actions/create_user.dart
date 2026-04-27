@@ -25,13 +25,15 @@ Future<String?> createUser(String email, String password) async {
       return null;
     }
 
-    final url = Uri.parse('$kSupabaseUrl/auth/v1/signup');
+    final supaUrl = FFDevEnvironmentValues().supabaseUrl;
+    final supaKey = FFDevEnvironmentValues().supabaseAnonKey;
+    final url = Uri.parse('$supaUrl/auth/v1/signup');
     final response = await http.post(
       url,
       headers: {
         'Content-Type': 'application/json',
-        'apikey': kSupabaseAnonKey,
-        'Authorization': 'Bearer $kSupabaseAnonKey',
+        'apikey': supaKey,
+        'Authorization': 'Bearer $supaKey',
       },
       body: jsonEncode({'email': email, 'password': password}),
     );

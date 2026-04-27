@@ -2136,90 +2136,119 @@ class _CrearSolicitudWidgetState extends State<CrearSolicitudWidget> {
                                 if (_model.servicioSeleccValue == null) {
                                   return;
                                 }
-                                _model.serv =
-                                    await SolicitudesServicioTable().queryRows(
-                                  queryFn: (q) => q.order('ticket'),
-                                );
-                                if (_model.proveedorSeleccionadoValue == null ||
-                                    _model.proveedorSeleccionadoValue == '') {
-                                  await SolicitudesServicioTable().insert({
-                                    'usuario_id':
-                                        _model.usuarioSeleccionadoValue,
-                                    'descripcion':
-                                        _model.descripcionTextController.text,
-                                    'ubicacion':
-                                        _model.direccionTextController.text,
-                                    'fecha': supaSerialize<DateTime>(
-                                        functions.formatTimestamp(
-                                            _model.datePicked!, true)),
-                                    'hora': supaSerialize<PostgresTime>(
-                                        PostgresTime(functions.formatTimestamp(
-                                            _model.datePicked!, false))),
-                                    'precio': valueOrDefault<double>(
-                                      _model.precioss?.firstOrNull?.precio,
-                                      0.0,
+                                try {
+                                  _model.serv =
+                                      await SolicitudesServicioTable()
+                                          .queryRows(
+                                    queryFn: (q) => q.order('ticket'),
+                                  );
+                                  final int nextTicket =
+                                      (_model.serv != null &&
+                                              _model.serv!.isNotEmpty &&
+                                              _model.serv!.last.ticket != null)
+                                          ? _model.serv!.last.ticket! + 1
+                                          : 1;
+                                  if (_model.proveedorSeleccionadoValue ==
+                                          null ||
+                                      _model.proveedorSeleccionadoValue ==
+                                          '') {
+                                    await SolicitudesServicioTable().insert({
+                                      'usuario_id':
+                                          _model.usuarioSeleccionadoValue,
+                                      'descripcion': _model
+                                          .descripcionTextController.text,
+                                      'ubicacion':
+                                          _model.direccionTextController.text,
+                                      'fecha': supaSerialize<DateTime>(
+                                          functions.formatTimestamp(
+                                              _model.datePicked!, true)),
+                                      'hora': supaSerialize<PostgresTime>(
+                                          PostgresTime(
+                                              functions.formatTimestamp(
+                                                  _model.datePicked!, false))),
+                                      'precio': valueOrDefault<double>(
+                                        _model.precioss?.firstOrNull?.precio,
+                                        0.0,
+                                      ),
+                                      'estado': 'entrantes',
+                                      'servicio_id':
+                                          _model.servicioSeleccValue,
+                                      'estado_pago': 'pendiente',
+                                      'ticket': nextTicket,
+                                      'precio_base': valueOrDefault<double>(
+                                        _model.precioss?.firstOrNull?.precio,
+                                        0.0,
+                                      ),
+                                      'precio_adicionales': double.tryParse(
+                                          _model.precAdicTextController.text),
+                                      'servicio_nombre':
+                                          _model.precioss?.firstOrNull?.nombre,
+                                      'tipo': 'externo',
+                                      'informacion_adicional':
+                                          _model.notasTextController.text,
+                                    });
+                                  } else {
+                                    await SolicitudesServicioTable().insert({
+                                      'usuario_id':
+                                          _model.usuarioSeleccionadoValue,
+                                      'descripcion': _model
+                                          .descripcionTextController.text,
+                                      'ubicacion':
+                                          _model.direccionTextController.text,
+                                      'fecha': supaSerialize<DateTime>(
+                                          functions.formatTimestamp(
+                                              _model.datePicked!, true)),
+                                      'hora': supaSerialize<PostgresTime>(
+                                          PostgresTime(
+                                              functions.formatTimestamp(
+                                                  _model.datePicked!, false))),
+                                      'precio': valueOrDefault<double>(
+                                        _model.precioss?.firstOrNull?.precio,
+                                        0.0,
+                                      ),
+                                      'estado': 'aceptadas',
+                                      'servicio_id':
+                                          _model.servicioSeleccValue,
+                                      'estado_pago': 'pendiente',
+                                      'ticket': nextTicket,
+                                      'precio_base': valueOrDefault<double>(
+                                        _model.precioss?.firstOrNull?.precio,
+                                        0.0,
+                                      ),
+                                      'precio_adicionales': double.tryParse(
+                                          _model.precAdicTextController.text),
+                                      'servicio_nombre':
+                                          _model.precioss?.firstOrNull?.nombre,
+                                      'tipo': 'externo',
+                                      'informacion_adicional':
+                                          _model.notasTextController.text,
+                                      'profesional_id':
+                                          _model.proveedorSeleccionadoValue,
+                                    });
+                                  }
+
+                                  Navigator.pop(context);
+                                  context
+                                      .goNamed(SolicitudesWidget.routeName);
+                                  safeSetState(() {});
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Error al crear la solicitud: $e',
+                                        style: TextStyle(
+                                          color: FlutterFlowTheme.of(context)
+                                              .primaryText,
+                                        ),
+                                      ),
+                                      duration:
+                                          Duration(milliseconds: 4000),
+                                      backgroundColor:
+                                          FlutterFlowTheme.of(context)
+                                              .error,
                                     ),
-                                    'estado': 'entrantes',
-                                    'servicio_id': _model.servicioSeleccValue,
-                                    'estado_pago': 'pendiente',
-                                    'ticket':
-                                        (_model.serv!.firstOrNull!.ticket!) + 1,
-                                    'precio_base': valueOrDefault<double>(
-                                      _model.precioss?.firstOrNull?.precio,
-                                      0.0,
-                                    ),
-                                    'precio_adicionales': double.tryParse(
-                                        _model.precAdicTextController.text),
-                                    'servicio_nombre':
-                                        _model.precioss?.firstOrNull?.nombre,
-                                    'tipo': 'externo',
-                                    'informacion_adicional':
-                                        _model.notasTextController.text,
-                                  });
-                                } else {
-                                  await SolicitudesServicioTable().insert({
-                                    'usuario_id':
-                                        _model.usuarioSeleccionadoValue,
-                                    'descripcion':
-                                        _model.descripcionTextController.text,
-                                    'ubicacion':
-                                        _model.direccionTextController.text,
-                                    'fecha': supaSerialize<DateTime>(
-                                        functions.formatTimestamp(
-                                            _model.datePicked!, true)),
-                                    'hora': supaSerialize<PostgresTime>(
-                                        PostgresTime(functions.formatTimestamp(
-                                            _model.datePicked!, false))),
-                                    'precio': valueOrDefault<double>(
-                                      _model.precioss?.firstOrNull?.precio,
-                                      0.0,
-                                    ),
-                                    'estado': 'aceptadas',
-                                    'servicio_id': _model.servicioSeleccValue,
-                                    'estado_pago': 'pendiente',
-                                    'ticket':
-                                        (_model.serv!.firstOrNull!.ticket!) + 1,
-                                    'precio_base': valueOrDefault<double>(
-                                      _model.precioss?.firstOrNull?.precio,
-                                      0.0,
-                                    ),
-                                    'precio_adicionales': double.tryParse(
-                                        _model.precAdicTextController.text),
-                                    'servicio_nombre':
-                                        _model.precioss?.firstOrNull?.nombre,
-                                    'tipo': 'externo',
-                                    'informacion_adicional':
-                                        _model.notasTextController.text,
-                                    'profesional_id':
-                                        _model.proveedorSeleccionadoValue,
-                                  });
+                                  );
                                 }
-
-                                Navigator.pop(context);
-
-                                context.goNamed(SolicitudesWidget.routeName);
-
-                                safeSetState(() {});
                               },
                               text: 'Continuar',
                               options: FFButtonOptions(

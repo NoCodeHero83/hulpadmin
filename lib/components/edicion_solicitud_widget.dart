@@ -2269,7 +2269,7 @@ class _EdicionSolicitudWidgetState extends State<EdicionSolicitudWidget> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            'Precio',
+                                            'Precio base',
                                             style: FlutterFlowTheme.of(context)
                                                 .bodyMedium
                                                 .override(
@@ -2472,7 +2472,7 @@ class _EdicionSolicitudWidgetState extends State<EdicionSolicitudWidget> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            'Precio adicional',
+                                            'Precios Adicionales',
                                             style: FlutterFlowTheme.of(context)
                                                 .bodyMedium
                                                 .override(

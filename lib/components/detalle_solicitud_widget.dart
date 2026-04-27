@@ -2301,7 +2301,7 @@ class _DetalleSolicitudWidgetState extends State<DetalleSolicitudWidget> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            'Precio',
+                                            'Precios Adicionales',
                                             style: FlutterFlowTheme.of(context)
                                                 .bodyMedium
                                                 .override(
