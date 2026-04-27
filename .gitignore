@@ -43,6 +43,7 @@
 # Environment / credentials
 assets/environment_values/environment.json
 assets/environment_values/environment_test.json
+credencialesproduccion.txt
 
 # Web related
 

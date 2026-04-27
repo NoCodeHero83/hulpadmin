@@ -1,0 +1,58 @@
+name: Build y Deploy a Vercel
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Crear environment.json de producción
+        run: |
+          cat > assets/environment_values/environment.json << EOF
+          {
+            "privatekey": "${{ secrets.WOMPI_PRIVATE_KEY }}",
+            "publickey": "${{ secrets.WOMPI_PUBLIC_KEY }}",
+            "isProduction": true,
+            "supabaseUrl": "${{ secrets.SUPABASE_URL }}",
+            "supabaseAnonKey": "${{ secrets.SUPABASE_ANON_KEY }}",
+            "integrityKey": "${{ secrets.WOMPI_INTEGRITY_KEY }}"
+          }
+          EOF
+
+      - name: Instalar dependencias
+        run: flutter pub get
+
+      - name: Compilar Flutter web
+        run: flutter build web --web-renderer html --release
+
+      - name: Agregar vercel.json al output
+        run: |
+          cat > build/web/vercel.json << 'EOF'
+          {
+            "cleanUrls": true,
+            "rewrites": [
+              { "source": "/(.*)", "destination": "/index.html" }
+            ]
+          }
+          EOF
+
+      - name: Deploy a Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          npm install -g vercel@latest
+          vercel ./build/web --prod --token=$VERCEL_TOKEN --yes
