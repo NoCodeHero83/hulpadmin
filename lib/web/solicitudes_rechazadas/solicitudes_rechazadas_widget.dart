@@ -661,14 +661,14 @@ class _SolicitudesRechazadasWidgetState
                                                                   ''
                                                           ? containerfiltroVwProfesionalesCompletoRowList
                                                               .unique((e) => e
-                                                                  .categoriaNombre!)
+                                                                  .categoriaNombre ?? '')
                                                               .map((e) => e
                                                                   .categoriaNombre)
                                                               .withoutNulls
                                                               .toList()
                                                           : containerfiltroVwProfesionalesCompletoRowList
                                                               .unique((e) => e
-                                                                  .categoriaNombre!)
+                                                                  .categoriaNombre ?? '')
                                                               .map((e) => e
                                                                   .categoriaNombre)
                                                               .withoutNulls
@@ -835,7 +835,7 @@ class _SolicitudesRechazadasWidgetState
                                                                               'pendiente')
                                                                           .toList()
                                                                           .unique((e) =>
-                                                                              e.profesionalId!)
+                                                                              e.profesionalId ?? '')
                                                                           .length
                                                                           .toString(),
                                                                       '0',
@@ -907,7 +907,7 @@ class _SolicitudesRechazadasWidgetState
                                                                         String>(
                                                                       containerfiltroVwProfesionalesCompletoRowList
                                                                           .unique((e) =>
-                                                                              e.profesionalId!)
+                                                                              e.profesionalId ?? '')
                                                                           .length
                                                                           .toString(),
                                                                       '0',
@@ -1010,7 +1010,7 @@ class _SolicitudesRechazadasWidgetState
                                                                         valueOrDefault<
                                                                             String>(
                                                                           textVwProfesionalesCompletoRowList
-                                                                              .unique((e) => e.profesionalId!)
+                                                                              .unique((e) => e.profesionalId ?? '')
                                                                               .length
                                                                               .toString(),
                                                                           '100',
@@ -1061,7 +1061,7 @@ class _SolicitudesRechazadasWidgetState
                                                             e.categoriaNombre)
                                                         .toList()
                                                         .unique((e) =>
-                                                            e.profesionalId!);
+                                                            e.profesionalId ?? '');
                                                   } else if (_model
                                                               .textController
                                                               .text !=
@@ -1071,11 +1071,11 @@ class _SolicitudesRechazadasWidgetState
                                                           '') {
                                                     return containerfiltroVwProfesionalesCompletoRowList
                                                         .unique((e) =>
-                                                            e.profesionalId!);
+                                                            e.profesionalId ?? '');
                                                   } else {
                                                     return containerVwProfesionalesCompletoRowList
                                                         .unique((e) =>
-                                                            e.profesionalId!);
+                                                            e.profesionalId ?? '');
                                                   }
                                                 }()
                                                     .toList();
