@@ -26,7 +26,6 @@ class SolicitudesRechazadasModel
 
   // Model for Menu component.
   late MenuModel menuModel;
-  Stream<List<VwProfesionalesCompletoRow>>? containerSupabaseStream;
   // State field(s) for TextField widget.
   FocusNode? textFieldFocusNode;
   TextEditingController? textController;

@@ -120,41 +120,10 @@ class _SolicitudesRechazadasWidgetState
 
                       return Container(
                         decoration: BoxDecoration(),
-                        child: StreamBuilder<List<VwProfesionalesCompletoRow>>(
-                          stream: _model.containerSupabaseStream ??= SupaFlow
-                              .client
-                              .from("vw_profesionales_completo")
-                              .stream(primaryKey: [
-                                'profesional_id',
-                                'subcategoria_id',
-                                'categoria_id'
-                              ])
-                              .eqOrNull(
-                                'verificado',
-                                'no verificado',
-                              )
-                              .map((list) => list
-                                  .map((item) =>
-                                      VwProfesionalesCompletoRow(item))
-                                  .toList()),
-                          builder: (context, snapshot) {
-                            // Customize what your widget looks like when it's loading.
-                            if (!snapshot.hasData) {
-                              return Center(
-                                child: SizedBox(
-                                  width: 50.0,
-                                  height: 50.0,
-                                  child: CircularProgressIndicator(
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      FlutterFlowTheme.of(context).primary,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }
-                            List<VwProfesionalesCompletoRow>
-                                containerVwProfesionalesCompletoRowList =
-                                snapshot.data!;
+                        child: Builder(
+                          builder: (context) {
+                            final containerVwProfesionalesCompletoRowList =
+                                containerfiltroVwProfesionalesCompletoRowList;
 
                             return Container(
                               decoration: BoxDecoration(),
