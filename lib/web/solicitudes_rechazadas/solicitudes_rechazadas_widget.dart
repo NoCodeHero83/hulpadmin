@@ -1323,7 +1323,10 @@ class _SolicitudesRechazadasWidgetState
                                                         dateTimeFormat(
                                                             "d/M/y",
                                                             proveedoresDatosItem
-                                                                .ultimoAcceso!),
+                                                                    .ultimoAcceso ??
+                                                                proveedoresDatosItem
+                                                                    .fechaRegistro ??
+                                                                DateTime.now()),
                                                         style: FlutterFlowTheme
                                                                 .of(context)
                                                             .bodyMedium
@@ -1427,7 +1430,8 @@ class _SolicitudesRechazadasWidgetState
                                                         dateTimeFormat(
                                                             "d/M/y",
                                                             proveedoresDatosItem
-                                                                .fechaRegistro!),
+                                                                    .fechaRegistro ??
+                                                                DateTime.now()),
                                                         style:
                                                             FlutterFlowTheme.of(
                                                                     context)
