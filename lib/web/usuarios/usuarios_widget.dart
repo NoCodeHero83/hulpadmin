@@ -34,10 +34,57 @@ class _UsuariosWidgetState extends State<UsuariosWidget> {
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
+  static DateTime _epochFallback(DateTime? d) =>
+      d ?? DateTime.fromMillisecondsSinceEpoch(0);
+
+  /// Filtra por ventana de registro según el dropdown (Recientes = sin recorte).
+  List<VwListaUsuariosConServiciosRow> _applyFechaRegistroFilter(
+    List<VwListaUsuariosConServiciosRow> base,
+  ) {
+    final sel = _model.dropDownValue?.trim();
+    if (sel == null || sel.isEmpty || sel == 'Recientes') {
+      return base;
+    }
+
+    final now = DateTime.now();
+    late final DateTime desde;
+    if (sel == 'Ultimos 7 dias') {
+      desde = now.subtract(const Duration(days: 7));
+    } else if (sel == 'Ultimos 30 dias') {
+      desde = now.subtract(const Duration(days: 30));
+    } else {
+      return base;
+    }
+
+    return base.where((e) {
+      final d = e.fechaRegistro;
+      if (d == null) return false;
+      return !d.isBefore(desde);
+    }).toList();
+  }
+
+  List<VwListaUsuariosConServiciosRow> _usuariosParaTabla({
+    required List<VwListaUsuariosConServiciosRow> filtroBusqueda,
+    required List<VwListaUsuariosConServiciosRow> todos,
+  }) {
+    final hayTexto = _model.textController.text.trim().isNotEmpty;
+    final base = hayTexto
+        ? filtroBusqueda
+        : todos
+            .sortedList(
+              keyOf: (e) => _epochFallback(e.fechaRegistro),
+              desc: true,
+            )
+            .toList();
+    return _applyFechaRegistroFilter(base);
+  }
+
   @override
   void initState() {
     super.initState();
     _model = createModel(context, () => UsuariosModel());
+
+    _model.dropDownValue ??= 'Recientes';
 
     _model.textController ??= TextEditingController();
     _model.textFieldFocusNode ??= FocusNode();
@@ -681,10 +728,12 @@ class _UsuariosWidgetState extends State<UsuariosWidget> {
                                                                     .dropDownValueController ??=
                                                                 FormFieldController<
                                                                         String>(
-                                                                    null),
+                                                                    _model
+                                                                        .dropDownValue),
                                                             options: [
+                                                              'Recientes',
                                                               'Ultimos 7 dias',
-                                                              'Ultimos 30 dias'
+                                                              'Ultimos 30 dias',
                                                             ],
                                                             onChanged: (val) =>
                                                                 safeSetState(() =>
@@ -720,7 +769,7 @@ class _UsuariosWidgetState extends State<UsuariosWidget> {
                                                                           .fontStyle,
                                                                     ),
                                                             hintText:
-                                                                'Recientes',
+                                                                'Filtrar fecha',
                                                             icon: Icon(
                                                               Icons
                                                                   .keyboard_arrow_down_rounded,
@@ -812,7 +861,12 @@ class _UsuariosWidgetState extends State<UsuariosWidget> {
                                                               text:
                                                                   valueOrDefault<
                                                                       String>(
-                                                                containerVwListaUsuariosConServiciosRowList
+                                                                _usuariosParaTabla(
+                                                                  filtroBusqueda:
+                                                                      containerfiltroVwListaUsuariosConServiciosRowList,
+                                                                  todos:
+                                                                      containerVwListaUsuariosConServiciosRowList,
+                                                                )
                                                                     .length
                                                                     .toString(),
                                                                 '0',
@@ -878,20 +932,13 @@ class _UsuariosWidgetState extends State<UsuariosWidget> {
                                                   decoration: BoxDecoration(),
                                                   child: Builder(
                                                     builder: (context) {
-                                                      final users = _model
-                                                                      .textController
-                                                                      .text !=
-                                                                  null &&
-                                                              _model.textController
-                                                                      .text !=
-                                                                  ''
-                                                          ? containerfiltroVwListaUsuariosConServiciosRowList
-                                                          : containerVwListaUsuariosConServiciosRowList
-                                                              .sortedList(
-                                                                  keyOf: (e) =>
-                                                                      e.fechaRegistro!,
-                                                                  desc: true)
-                                                              .toList();
+                                                      final users =
+                                                          _usuariosParaTabla(
+                                                        filtroBusqueda:
+                                                            containerfiltroVwListaUsuariosConServiciosRowList,
+                                                        todos:
+                                                            containerVwListaUsuariosConServiciosRowList,
+                                                      );
 
                                                       return FlutterFlowDataTable<
                                                           VwListaUsuariosConServiciosRow>(

@@ -5,7 +5,6 @@ import '/components/dropdown_solicitud_estado_widget.dart';
 import '/components/edicion_solicitud_widget.dart';
 import '/components/hulp_loading_indicator.dart';
 import '/components/notificacion2_widget.dart';
-import '/flutter_flow/flutter_flow_data_table.dart';
 import '/flutter_flow/flutter_flow_drop_down.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -39,6 +38,32 @@ class _SolicitudesWidgetState extends State<SolicitudesWidget> {
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
   StreamSubscription<List<Map<String, dynamic>>>? _solicitudesTriggerSub;
+
+  static String? _trimOrNull(String? s) {
+    if (s == null) return null;
+    final t = s.trim();
+    return t.isEmpty ? null : t;
+  }
+
+  /// Compara categorías/estados aunque difieran mayúsculas o tildes (p. ej. Plomería vs Plomeria).
+  static String _normCompare(String? s) {
+    var t = _trimOrNull(s) ?? '';
+    t = t.toLowerCase();
+    for (final p in const [
+      ['á', 'a'],
+      ['é', 'e'],
+      ['í', 'i'],
+      ['ó', 'o'],
+      ['ú', 'u'],
+      ['ü', 'u'],
+      ['ñ', 'n'],
+    ]) {
+      t = t.replaceAll(p[0], p[1]);
+    }
+    return t;
+  }
+
+  static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
   @override
   void initState() {
@@ -75,51 +100,55 @@ class _SolicitudesWidgetState extends State<SolicitudesWidget> {
 
   List<VwSolicitudesServiciosCompletaRow> _applyFilters({
     required List<VwSolicitudesServiciosCompletaRow> allData,
-    required List<VwSolicitudesServiciosCompletaRow> estadoFiltered,
-    required List<VwSolicitudesServiciosCompletaRow> categoriaFiltered,
     required List<VwSolicitudesServiciosCompletaRow> searchFiltered,
   }) {
-    final hasText =
-        _model.textController.text != null && _model.textController.text != '';
-    final hasEstado =
-        _model.dropDownValue1 != null && _model.dropDownValue1 != '';
-    final hasCategoria =
-        _model.dropDownValue2 != null && _model.dropDownValue2 != '';
+    final estadoSel = _trimOrNull(_model.dropDownValue1);
+    final catSel = _trimOrNull(_model.dropDownValue2);
+    final estadoKey = estadoSel != null ? _normCompare(estadoSel) : null;
+    final catKey = catSel != null ? _normCompare(catSel) : null;
 
-    // Step 1: base filter
-    List<VwSolicitudesServiciosCompletaRow> result;
-    if (hasText && hasEstado && hasCategoria) {
-      result = searchFiltered
-          .where((e) =>
-              _model.dropDownValue1 == e.estadoSolicitud &&
-              _model.dropDownValue2 == e.categoriaNombre)
-          .toList();
-    } else if (hasEstado && hasCategoria) {
-      result = categoriaFiltered
-          .where((e) => _model.dropDownValue1 == e.estadoSolicitud)
-          .toList();
-    } else if (hasEstado) {
-      result = categoriaFiltered;
-    } else if (hasCategoria) {
-      result = estadoFiltered;
-    } else if (hasText) {
-      result = searchFiltered;
-    } else {
-      result = allData;
+    final hasText = _model.textController.text.trim().isNotEmpty;
+
+    Iterable<VwSolicitudesServiciosCompletaRow> result = allData;
+
+    if (hasText) {
+      final allowedIds = searchFiltered
+          .map((e) => e.solicitudId)
+          .whereType<String>()
+          .toSet();
+      result = result.where(
+        (e) => e.solicitudId != null && allowedIds.contains(e.solicitudId!),
+      );
+    }
+    if (estadoKey != null) {
+      result = result.where(
+        (e) => _normCompare(e.estadoSolicitud) == estadoKey,
+      );
+    }
+    if (catKey != null) {
+      result = result.where(
+        (e) => _normCompare(e.categoriaNombre) == catKey,
+      );
     }
 
-    // Step 2: date range filter
+    var list = result.toList();
+
     if (_model.dateStart != null && _model.dateEnd != null) {
-      result = result.where((e) {
-        if (e.fecha == null) return false;
-        return !e.fecha!.isBefore(_model.dateStart!) &&
-            !e.fecha!.isAfter(_model.dateEnd!);
+      final rangeStart = _dateOnly(_model.dateStart!);
+      final rangeEnd = _dateOnly(_model.dateEnd!);
+      list = list.where((row) {
+        if (row.fecha == null) return false;
+        final d = _dateOnly(row.fecha!);
+        return !d.isBefore(rangeStart) && !d.isAfter(rangeEnd);
       }).toList();
     }
 
-    // Step 3: sort
     final desc = _model.dropDownOrdenValue == 'Recientes primero';
-    return result.sortedList(keyOf: (e) => e.fecha!, desc: desc).toList();
+    final withFecha = list.where((e) => e.fecha != null).toList();
+    final sinFecha = list.where((e) => e.fecha == null).toList();
+    final sorted =
+        withFecha.sortedList(keyOf: (e) => e.fecha!, desc: desc).toList();
+    return [...sorted, ...sinFecha];
   }
 
   // -- Action handlers --------------------------------------------------------
@@ -240,68 +269,44 @@ class _SolicitudesWidgetState extends State<SolicitudesWidget> {
     );
   }
 
-  /// Three FutureBuilders (estado, categoria, search) + one StreamBuilder.
   Widget _buildDataPipeline() {
     return FutureBuilder<List<VwSolicitudesServiciosCompletaRow>>(
-      future: VwSolicitudesServiciosCompletaTable().queryRows(
-        queryFn: (q) => q.like('estado_solicitud', '%${_model.dropDownValue1}%'),
-      ),
-      builder: (context, estadoSnap) {
-        if (!estadoSnap.hasData) return const HulpLoadingIndicator();
-        final estadoRows = estadoSnap.data!;
+      future: (_model.requestCompleter ??=
+              Completer<List<VwSolicitudesServiciosCompletaRow>>()
+                ..complete(
+                    VwSolicitudesServiciosCompletaTable().queryRows(
+                  queryFn: (q) => q
+                      .ilike('cliente_nombre_completo',
+                          '%${_model.textController.text}%')
+                      .order('fecha'),
+                )))
+          .future,
+      builder: (context, searchSnap) {
+        if (!searchSnap.hasData) return const HulpLoadingIndicator();
+        final searchRows = searchSnap.data!;
 
-        return FutureBuilder<List<VwSolicitudesServiciosCompletaRow>>(
-          future: VwSolicitudesServiciosCompletaTable().queryRows(
-            queryFn: (q) =>
-                q.like('categoria_nombre', '%${_model.dropDownValue2}%'),
-          ),
-          builder: (context, catSnap) {
-            if (!catSnap.hasData) return const HulpLoadingIndicator();
-            final catRows = catSnap.data!;
+        return StreamBuilder<List<VwSolicitudesServiciosCompletaRow>>(
+          stream: _model.containerSupabaseStream ??= SupaFlow.client
+              .from("vw_solicitudes_servicios_completa")
+              .stream(primaryKey: [
+                'solicitud_id',
+                'subcategoria_id',
+                'categoria_id'
+              ])
+              .order('fecha')
+              .map((list) => list
+                  .map((item) => VwSolicitudesServiciosCompletaRow(item))
+                  .toList()),
+          builder: (context, streamSnap) {
+            if (!streamSnap.hasData) {
+              return const HulpLoadingIndicator();
+            }
+            final allData = streamSnap.data!;
 
-            return FutureBuilder<List<VwSolicitudesServiciosCompletaRow>>(
-              future: (_model.requestCompleter ??=
-                      Completer<List<VwSolicitudesServiciosCompletaRow>>()
-                        ..complete(
-                            VwSolicitudesServiciosCompletaTable().queryRows(
-                          queryFn: (q) => q
-                              .ilike('cliente_nombre_completo',
-                                  '%${_model.textController.text}%')
-                              .order('fecha'),
-                        )))
-                  .future,
-              builder: (context, searchSnap) {
-                if (!searchSnap.hasData) return const HulpLoadingIndicator();
-                final searchRows = searchSnap.data!;
-
-                return StreamBuilder<List<VwSolicitudesServiciosCompletaRow>>(
-                  stream: _model.containerSupabaseStream ??= SupaFlow.client
-                      .from("vw_solicitudes_servicios_completa")
-                      .stream(primaryKey: [
-                        'solicitud_id',
-                        'subcategoria_id',
-                        'categoria_id'
-                      ])
-                      .order('fecha')
-                      .map((list) => list
-                          .map((item) =>
-                              VwSolicitudesServiciosCompletaRow(item))
-                          .toList()),
-                  builder: (context, streamSnap) {
-                    if (!streamSnap.hasData)
-                      return const HulpLoadingIndicator();
-                    final allData = streamSnap.data!;
-
-                    return _buildPageContent(
-                      context,
-                      allData: allData,
-                      estadoFiltered: catRows,
-                      categoriaFiltered: estadoRows,
-                      searchFiltered: searchRows,
-                    );
-                  },
-                );
-              },
+            return _buildPageContent(
+              context,
+              allData: allData,
+              searchFiltered: searchRows,
             );
           },
         );
@@ -312,14 +317,10 @@ class _SolicitudesWidgetState extends State<SolicitudesWidget> {
   Widget _buildPageContent(
     BuildContext context, {
     required List<VwSolicitudesServiciosCompletaRow> allData,
-    required List<VwSolicitudesServiciosCompletaRow> estadoFiltered,
-    required List<VwSolicitudesServiciosCompletaRow> categoriaFiltered,
     required List<VwSolicitudesServiciosCompletaRow> searchFiltered,
   }) {
     final solicitudesDatos = _applyFilters(
       allData: allData,
-      estadoFiltered: estadoFiltered,
-      categoriaFiltered: categoriaFiltered,
       searchFiltered: searchFiltered,
     );
 
@@ -342,13 +343,10 @@ class _SolicitudesWidgetState extends State<SolicitudesWidget> {
                     padding: const EdgeInsetsDirectional.fromSTEB(
                         0.0, 24.0, 0.0, 0.0),
                     child: SolicitudesFilterBar(
-                      estadoOptions: _getEstadoOptions(allData, estadoFiltered),
-                      categoriaOptions:
-                          _getCategoriaOptions(allData, categoriaFiltered),
+                      estadoOptions: _getEstadoOptions(allData),
+                      categoriaOptions: _getCategoriaOptions(allData),
                       dropDownValue1: _model.dropDownValue1,
                       dropDownValue2: _model.dropDownValue2,
-                      dropDownValueController1: _model.dropDownValueController1,
-                      dropDownValueController2: _model.dropDownValueController2,
                       dateStart: _model.dateStart,
                       dateEnd: _model.dateEnd,
                       resultCount: solicitudesDatos.length,
@@ -356,14 +354,10 @@ class _SolicitudesWidgetState extends State<SolicitudesWidget> {
                           safeSetState(() => _model.dropDownValue1 = val),
                       onCategoriaChanged: (val) =>
                           safeSetState(() => _model.dropDownValue2 = val),
-                      onEstadoReset: () => safeSetState(() {
-                        _model.dropDownValueController1?.reset();
-                        _model.dropDownValue1 = null;
-                      }),
-                      onCategoriaReset: () => safeSetState(() {
-                        _model.dropDownValueController2?.reset();
-                        _model.dropDownValue2 = null;
-                      }),
+                      onEstadoReset: () =>
+                          safeSetState(() => _model.dropDownValue1 = null),
+                      onCategoriaReset: () =>
+                          safeSetState(() => _model.dropDownValue2 = null),
                       onDateRangeSelected: (start, end) => safeSetState(() {
                         _model.dateStart = start;
                         _model.dateEnd = end;
@@ -405,30 +399,36 @@ class _SolicitudesWidgetState extends State<SolicitudesWidget> {
 
   List<String> _getEstadoOptions(
     List<VwSolicitudesServiciosCompletaRow> allData,
-    List<VwSolicitudesServiciosCompletaRow> estadoFiltered,
   ) {
-    final source = (_model.dropDownValue2 != null && _model.dropDownValue2 != '')
-        ? estadoFiltered
-        : allData;
-    return source
+    var list = allData
         .unique((e) => e.estadoSolicitud!)
         .map((e) => e.estadoSolicitud)
         .withoutNulls
         .toList();
+    final cur = _trimOrNull(_model.dropDownValue1);
+    if (cur != null &&
+        !list.any((o) => _normCompare(o) == _normCompare(cur))) {
+      list = [...list, cur];
+    }
+    list.sort((a, b) => _normCompare(a).compareTo(_normCompare(b)));
+    return list;
   }
 
   List<String> _getCategoriaOptions(
     List<VwSolicitudesServiciosCompletaRow> allData,
-    List<VwSolicitudesServiciosCompletaRow> categoriaFiltered,
   ) {
-    final source = (_model.dropDownValue1 != null && _model.dropDownValue1 != '')
-        ? categoriaFiltered
-        : allData;
-    return source
+    var list = allData
         .unique((e) => e.categoriaNombre!)
         .map((e) => e.categoriaNombre)
         .withoutNulls
         .toList();
+    final cur = _trimOrNull(_model.dropDownValue2);
+    if (cur != null &&
+        !list.any((o) => _normCompare(o) == _normCompare(cur))) {
+      list = [...list, cur];
+    }
+    list.sort((a, b) => _normCompare(a).compareTo(_normCompare(b)));
+    return list;
   }
 
   // -- Sub-widgets ------------------------------------------------------------
