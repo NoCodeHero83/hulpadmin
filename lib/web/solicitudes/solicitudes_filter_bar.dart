@@ -1,12 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '/backend/supabase/supabase.dart';
 import '/components/hulp_date_range_picker_widget.dart';
-import '/flutter_flow/flutter_flow_drop_down.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
-import '/flutter_flow/form_field_controller.dart';
 import '/flutter_flow/custom_functions.dart' as functions;
+
+String _normKey(String? s) {
+  var t = s?.trim() ?? '';
+  if (t.isEmpty) return '';
+  t = t.toLowerCase();
+  for (final p in const [
+    ['á', 'a'],
+    ['é', 'e'],
+    ['í', 'i'],
+    ['ó', 'o'],
+    ['ú', 'u'],
+    ['ü', 'u'],
+    ['ñ', 'n'],
+  ]) {
+    t = t.replaceAll(p[0], p[1]);
+  }
+  return t;
+}
+
+/// Valor que entiende [DropdownButtonFormField]: debe coincidir con un [DropdownMenuItem.value].
+String? _resolveMenuValue(String? selected, List<String> options) {
+  if (selected == null || selected.trim().isEmpty) return null;
+  if (options.contains(selected)) return selected;
+  final key = _normKey(selected);
+  for (final o in options) {
+    if (_normKey(o) == key) return o;
+  }
+  return null;
+}
 
 class SolicitudesFilterBar extends StatelessWidget {
   const SolicitudesFilterBar({
@@ -15,8 +41,6 @@ class SolicitudesFilterBar extends StatelessWidget {
     required this.categoriaOptions,
     required this.dropDownValue1,
     required this.dropDownValue2,
-    required this.dropDownValueController1,
-    required this.dropDownValueController2,
     required this.dateStart,
     required this.dateEnd,
     required this.resultCount,
@@ -32,8 +56,6 @@ class SolicitudesFilterBar extends StatelessWidget {
   final List<String> categoriaOptions;
   final String? dropDownValue1;
   final String? dropDownValue2;
-  final FormFieldController<String>? dropDownValueController1;
-  final FormFieldController<String>? dropDownValueController2;
   final DateTime? dateStart;
   final DateTime? dateEnd;
   final int resultCount;
@@ -49,6 +71,12 @@ class SolicitudesFilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bodyStyle = FlutterFlowTheme.of(context).bodyMedium.override(
+          font: GoogleFonts.inter(),
+          fontSize: 16.0,
+          letterSpacing: 0.0,
+        );
+
     return Container(
       width: MediaQuery.sizeOf(context).width * 1.0,
       decoration: BoxDecoration(
@@ -74,9 +102,9 @@ class SolicitudesFilterBar extends StatelessWidget {
                     ),
               ),
             ),
-            _buildEstadoDropdown(context),
+            _buildEstadoDropdown(context, bodyStyle),
             if (_hasEstado) _buildResetButton(onEstadoReset),
-            _buildCategoriaDropdown(context),
+            _buildCategoriaDropdown(context, bodyStyle),
             if (_hasCategoria) _buildResetButton(onCategoriaReset),
             HulpDateRangePickerWidget(
               dateStart: dateStart,
@@ -129,62 +157,93 @@ class SolicitudesFilterBar extends StatelessWidget {
     );
   }
 
-  Widget _buildEstadoDropdown(BuildContext context) {
-    return FlutterFlowDropDown<String>(
-      controller: dropDownValueController1 ??
-          FormFieldController<String>(dropDownValue1 ?? ''),
-      options: List<String>.from(estadoOptions),
-      optionLabels: functions.getStatus(estadoOptions.toList()),
-      onChanged: onEstadoChanged,
+  Widget _buildEstadoDropdown(BuildContext context, TextStyle bodyStyle) {
+    final opts = List<String>.from(estadoOptions);
+    final labels = functions.getStatus(opts);
+    final labelFor = <String, String>{
+      for (var i = 0; i < opts.length; i++) opts[i]: labels[i],
+    };
+    final selected = _resolveMenuValue(dropDownValue1, opts);
+
+    return SizedBox(
       width: 200.0,
       height: 48.0,
-      textStyle: FlutterFlowTheme.of(context).bodyMedium.override(
-            font: GoogleFonts.inter(),
-            fontSize: 16.0,
-            letterSpacing: 0.0,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: const Color(0xFFFBFAF9),
+          borderRadius: BorderRadius.circular(8.0),
+          border: Border.all(color: const Color(0xFFDFDFDF), width: 1.0),
+        ),
+        child: Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(8.0, 0.0, 4.0, 0.0),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              isExpanded: true,
+              value: opts.isEmpty ? null : selected,
+              hint: Text('Estado', style: bodyStyle),
+              icon: Icon(Icons.keyboard_arrow_down_rounded,
+                  color: FlutterFlowTheme.of(context).secondaryText, size: 24.0),
+              style: bodyStyle,
+              items: opts
+                  .map(
+                    (e) => DropdownMenuItem<String>(
+                      value: e,
+                      child: Text(
+                        labelFor[e] ?? e,
+                        style: bodyStyle,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  )
+                  .toList(),
+              onChanged: opts.isEmpty ? null : onEstadoChanged,
+            ),
           ),
-      hintText: 'Estado',
-      icon: Icon(Icons.keyboard_arrow_down_rounded,
-          color: FlutterFlowTheme.of(context).secondaryText, size: 24.0),
-      fillColor: const Color(0xFFFBFAF9),
-      elevation: 2.0,
-      borderColor: const Color(0xFFDFDFDF),
-      borderWidth: 1.0,
-      borderRadius: 8.0,
-      margin: const EdgeInsetsDirectional.fromSTEB(12.0, 0.0, 12.0, 0.0),
-      hidesUnderline: true,
-      isOverButton: false,
-      isSearchable: false,
-      isMultiSelect: false,
+        ),
+      ),
     );
   }
 
-  Widget _buildCategoriaDropdown(BuildContext context) {
-    return FlutterFlowDropDown<String>(
-      controller: dropDownValueController2 ??
-          FormFieldController<String>(null),
-      options: categoriaOptions,
-      onChanged: onCategoriaChanged,
+  Widget _buildCategoriaDropdown(BuildContext context, TextStyle bodyStyle) {
+    final opts = List<String>.from(categoriaOptions);
+    final selected = _resolveMenuValue(dropDownValue2, opts);
+
+    return SizedBox(
       width: 200.0,
       height: 48.0,
-      textStyle: FlutterFlowTheme.of(context).bodyMedium.override(
-            font: GoogleFonts.inter(),
-            fontSize: 16.0,
-            letterSpacing: 0.0,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: const Color(0xFFFBFAF9),
+          borderRadius: BorderRadius.circular(8.0),
+          border: Border.all(color: const Color(0xFFDFDFDF), width: 1.0),
+        ),
+        child: Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(8.0, 0.0, 4.0, 0.0),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              isExpanded: true,
+              value: opts.isEmpty ? null : selected,
+              hint: Text('Categoria', style: bodyStyle),
+              icon: Icon(Icons.keyboard_arrow_down_rounded,
+                  color: FlutterFlowTheme.of(context).secondaryText, size: 24.0),
+              style: bodyStyle,
+              items: opts
+                  .map(
+                    (e) => DropdownMenuItem<String>(
+                      value: e,
+                      child: Text(
+                        e,
+                        style: bodyStyle,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  )
+                  .toList(),
+              onChanged: opts.isEmpty ? null : onCategoriaChanged,
+            ),
           ),
-      hintText: 'Categoria',
-      icon: Icon(Icons.keyboard_arrow_down_rounded,
-          color: FlutterFlowTheme.of(context).secondaryText, size: 24.0),
-      fillColor: const Color(0xFFFBFAF9),
-      elevation: 2.0,
-      borderColor: const Color(0xFFDFDFDF),
-      borderWidth: 1.0,
-      borderRadius: 8.0,
-      margin: const EdgeInsetsDirectional.fromSTEB(12.0, 0.0, 12.0, 0.0),
-      hidesUnderline: true,
-      isOverButton: false,
-      isSearchable: false,
-      isMultiSelect: false,
+        ),
+      ),
     );
   }
 

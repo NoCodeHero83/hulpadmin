@@ -35,6 +35,79 @@ class _CategoriasWidgetState extends State<CategoriasWidget> {
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
+  static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+
+  static String? _trimOrNull(String? s) {
+    if (s == null) return null;
+    final t = s.trim();
+    return t.isEmpty ? null : t;
+  }
+
+  static String _normEstado(String? s) {
+    var t = _trimOrNull(s) ?? '';
+    t = t.toLowerCase();
+    for (final p in const [
+      ['á', 'a'],
+      ['é', 'e'],
+      ['í', 'i'],
+      ['ó', 'o'],
+      ['ú', 'u'],
+      ['ü', 'u'],
+      ['ñ', 'n'],
+    ]) {
+      t = t.replaceAll(p[0], p[1]);
+    }
+    return t;
+  }
+
+  /// Opciones de estado: todas las vistas en datos actuales, una etiqueta por valor normalizado.
+  List<String> _estadoOpcionesDesde(List<VwResumenCategoriasRow> todas) {
+    final porClave = <String, String>{};
+    for (final r in todas) {
+      final raw = r.estado;
+      if (raw == null || raw.trim().isEmpty) continue;
+      final label = raw.trim();
+      porClave.putIfAbsent(_normEstado(label), () => label);
+    }
+    final out = porClave.values.toList();
+    out.sort((a, b) => _normEstado(a).compareTo(_normEstado(b)));
+    return out;
+  }
+
+  /// Fechas distintas (día calendario), orden reciente primero; etiqueta como en la columna de la tabla.
+  List<String> _fechaOpcionesDesde(List<VwResumenCategoriasRow> todas) {
+    final porDia = <DateTime, DateTime>{};
+    for (final r in todas) {
+      if (r.creadoEn == null) continue;
+      final dia = _dateOnly(r.creadoEn!);
+      porDia.putIfAbsent(dia, () => r.creadoEn!);
+    }
+    final ordenados = porDia.keys.toList()..sort((a, b) => b.compareTo(a));
+    return ordenados
+        .map((dia) => dateTimeFormat('yMMMd', porDia[dia]!))
+        .toList();
+  }
+
+  List<VwResumenCategoriasRow> _filtrarTabla(
+    List<VwResumenCategoriasRow> porBusqueda,
+  ) {
+    var list = porBusqueda;
+    final est = _trimOrNull(_model.dropDownValue1);
+    if (est != null) {
+      final clave = _normEstado(est);
+      list =
+          list.where((e) => _normEstado(e.estado) == clave).toList();
+    }
+    final fechaSel = _trimOrNull(_model.dropDownValue2);
+    if (fechaSel != null) {
+      list = list.where((e) {
+        if (e.creadoEn == null) return false;
+        return dateTimeFormat('yMMMd', e.creadoEn!) == fechaSel;
+      }).toList();
+    }
+    return list;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -679,13 +752,8 @@ class _CategoriasWidgetState extends State<CategoriasWidget> {
                                                           FormFieldController<
                                                               String>(null),
                                                       options:
-                                                          containerfillVwResumenCategoriasRowList
-                                                              .unique((e) =>
-                                                                  e.estado!)
-                                                              .map((e) =>
-                                                                  e.estado)
-                                                              .withoutNulls
-                                                              .toList(),
+                                                          _estadoOpcionesDesde(
+                                                              containerVwResumenCategoriasRowList),
                                                       onChanged: (val) =>
                                                           safeSetState(() =>
                                                               _model.dropDownValue1 =
@@ -803,17 +871,9 @@ class _CategoriasWidgetState extends State<CategoriasWidget> {
                                                                 .dropDownValueController2 ??=
                                                             FormFieldController<
                                                                 String>(null),
-                                                        options: containerfillVwResumenCategoriasRowList
-                                                            .unique((e) =>
-                                                                dateTimeFormat(
-                                                                    "Md",
-                                                                    e
-                                                                        .creadoEn!))
-                                                            .map((e) =>
-                                                                dateTimeFormat(
-                                                                    "Md",
-                                                                    e.creadoEn))
-                                                            .toList(),
+                                                        options:
+                                                            _fechaOpcionesDesde(
+                                                                containerVwResumenCategoriasRowList),
                                                         onChanged: (val) =>
                                                             safeSetState(() =>
                                                                 _model.dropDownValue2 =
@@ -937,47 +997,10 @@ class _CategoriasWidgetState extends State<CategoriasWidget> {
                                                                 0.0, 16.0),
                                                     child: Builder(
                                                       builder: (context) {
-                                                        final categorias = () {
-                                                          if ((_model.textController
-                                                                          .text !=
-                                                                      null &&
-                                                                  _model.textController
-                                                                          .text !=
-                                                                      '') &&
-                                                              (_model.dropDownValue1 !=
-                                                                      null &&
-                                                                  _model.dropDownValue1 !=
-                                                                      '')) {
-                                                            return containerfillVwResumenCategoriasRowList
-                                                                .where((e) =>
-                                                                    _model
-                                                                        .dropDownValue1 ==
-                                                                    e.estado)
-                                                                .toList();
-                                                          } else if (_model
-                                                                      .dropDownValue1 !=
-                                                                  null &&
-                                                              _model.dropDownValue1 !=
-                                                                  '') {
-                                                            return containerfillVwResumenCategoriasRowList
-                                                                .where((e) =>
-                                                                    _model
-                                                                        .dropDownValue1 ==
-                                                                    e.estado)
-                                                                .toList();
-                                                          } else if (_model
-                                                                      .textController
-                                                                      .text !=
-                                                                  null &&
-                                                              _model.textController
-                                                                      .text !=
-                                                                  '') {
-                                                            return containerfillVwResumenCategoriasRowList;
-                                                          } else {
-                                                            return containerVwResumenCategoriasRowList;
-                                                          }
-                                                        }()
-                                                            .toList();
+                                                        final categorias =
+                                                            _filtrarTabla(
+                                                          containerfillVwResumenCategoriasRowList,
+                                                        );
 
                                                         return FlutterFlowDataTable<
                                                             VwResumenCategoriasRow>(
