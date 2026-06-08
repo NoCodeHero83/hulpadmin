@@ -1,14 +1,10 @@
 #!/bin/bash
 set -e
 
-# IS_PRODUCTION controla el ambiente:
-#   true  → producción  (default cuando no se define)
-#   false → sandbox/staging
 IS_PROD="${IS_PRODUCTION:-true}"
 
-echo "▶ Ambiente: $([ "$IS_PROD" = "true" ] && echo 'PRODUCCIÓN' || echo 'SANDBOX')"
+echo "Ambiente: $([ "$IS_PROD" = "true" ] && echo 'PRODUCCION' || echo 'SANDBOX')"
 
-# Genera environment.json desde las variables de entorno de Vercel
 cat > assets/environment_values/environment.json << EOF
 {
   "privatekey": "${WOMPI_PRIVATE_KEY}",
@@ -20,7 +16,6 @@ cat > assets/environment_values/environment.json << EOF
 }
 EOF
 
-# Instala Flutter si no está disponible
 if ! command -v flutter &> /dev/null; then
   git clone https://github.com/flutter/flutter.git -b stable --depth 1 /opt/flutter
   export PATH="$PATH:/opt/flutter/bin"
