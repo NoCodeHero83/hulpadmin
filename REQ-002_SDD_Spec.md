@@ -99,28 +99,40 @@ Future<void> downloadDocument(String url, String fileName) async
 - **Error:** Cualquier excepción se captura, se asigna `_isDownloading = false`, y se relanza para que el llamador la muestre.  
 - **Imports requeridos:** `package:http/http.dart`, `package:file_saver/file_saver.dart`.
 
-### 4.3 `_buildDocumentRow` (helper de UI — función privada top-level o método del State)
+### 4.3 `_buildDocumentCard` (helper de UI — función privada top-level o método del State)
 
 ```
-Widget _buildDocumentRow(
+Widget _buildDocumentCard(
   BuildContext context, {
   required String label,
   required String? url,
-  required String downloadFileName,
+  required String downloadPrefix,
+  required String? proveedorId,
   required bool isDownloading,
-  required VoidCallback onView,
-  required VoidCallback onDownload,
+  required VoidCallback? onView,
+  required VoidCallback? onDownload,
 })
 ```
 
-- **Propósito:** Renderizar una fila de documento reutilizable para Zona A y Zona B.  
+- **Propósito:** Renderizar una tarjeta de documento reutilizable para Zona A y Zona B.  
 - **Parámetros:**  
-  - `label` — texto descriptivo del documento (ej. `'Cédula'`).  
-  - `url` — URL del documento; si es `null` o vacía se muestra estado "No cargado".  
-  - `downloadFileName` — pasado a `downloadDocument`.  
-  - `isDownloading` — si `true`, reemplaza el botón "Descargar" por un `CircularProgressIndicator` de 18×18.  
-  - `onView` / `onDownload` — callbacks inyectados.  
-- **Retorno:** `Widget` con el layout descrito en §6.
+  - `label` — título de la tarjeta (ej. `'Cédula'`, o `entidadCertificadora`).  
+  - `url` — URL del documento; si es `null` o vacía se muestra estado "No cargado" sin botones.  
+  - `downloadPrefix` — prefijo del nombre de archivo descargado (ej. `'cedula'` → `'cedula_<proveedorId>.<ext>'`).  
+  - `proveedorId` — usado para construir el `downloadFileName`.  
+  - `isDownloading` — si `true`, el botón "Descargar" muestra spinner y está deshabilitado.  
+  - `onView` / `onDownload` — `null` cuando `url` es vacía/nula (botones no se renderizan).  
+- **Retorno:** `Widget` con el layout de tarjeta descrito en §6.3.
+
+### 4.4 `_extractFilename` y `_isImageUrl` (helpers de utilidad — funciones privadas)
+
+```dart
+String _extractFilename(String? url)
+bool _isImageUrl(String url)
+```
+
+- `_extractFilename`: retorna el último segmento del path de la URL como nombre de archivo. Si `url` es nula, vacía, o el parse falla, retorna `'Sin archivo'`.
+- `_isImageUrl`: retorna `true` si la extensión del path (ignorando query params y case) es una de: `jpg`, `jpeg`, `png`, `webp`. Se usa para decidir entre thumbnail real o ícono PDF.
 
 ---
 
@@ -144,38 +156,48 @@ Widget _buildDocumentRow(
 
 **Posición:** Insertar como nuevo bloque hijo del `Column` principal, **inmediatamente antes** del `Align` que contiene el `Text('Certificaciones')` (~línea 2242).
 
-**Estructura visual:**
+#### 6.1.1 Encabezado de sección
 
 ```
-──────────────────────────────────────────
-[Sección encabezado]
-  Text: "Documentos de registro"
-  Estilo: fontSize 20, fontWeight w600, color primaryText
-  Padding top: 24, bottom: 12
+Row: MainAxisAlignment.spaceBetween
+  Text "Documentos de registro"
+    fontSize: 20, fontWeight: w600, color: primaryText
+    padding top: 24, bottom: 12
+  Badge "X/X cargados"           ← contador verde
+    color fondo: Color(0xFFE8F5E9)
+    color texto: Color(0xFF2E7D32)
+    fontSize: 12, borderRadius: 20
+    padding: horizontal 10, vertical 4
+```
 
-[Fila: Cédula]
-  _buildDocumentRow(label: 'Cédula', url: columnUsuariosRow?.cedula, ...)
+El contador `X` (cargados) = número de campos entre `cedula`, `cuentaBancaria`, `contrato` cuyo valor no es nulo ni vacío. El total es siempre `3`.
 
-[Fila: Cuenta bancaria]
-  _buildDocumentRow(label: 'Cuenta bancaria', url: columnUsuariosRow?.cuentaBancaria, ...)
+#### 6.1.2 Grid de tarjetas
 
-[Fila: Contrato]
-  _buildDocumentRow(label: 'Contrato', url: columnUsuariosRow?.contrato, ...)
-──────────────────────────────────────────
+Layout: `Wrap` con `spacing: 12`, `runSpacing: 12`, width máximo heredado del contenedor padre (800px). Cada tarjeta ocupa `~(anchoDisponible - 24) / 3` de ancho mínimo; si el ancho < 500px colapsa a 1 columna.  
+Se renderizan siempre las 3 tarjetas (Cédula, Cuenta bancaria, Contrato), independientemente de si tienen URL o no.
+
+Llamadas:
+```
+_buildDocumentCard(label: 'Cédula',          url: columnUsuariosRow?.cedula,         downloadPrefix: 'cedula',          proveedorId: widget.proveedorId)
+_buildDocumentCard(label: 'Cuenta bancaria', url: columnUsuariosRow?.cuentaBancaria, downloadPrefix: 'cuenta_bancaria',  proveedorId: widget.proveedorId)
+_buildDocumentCard(label: 'Contrato',        url: columnUsuariosRow?.contrato,        downloadPrefix: 'contrato',         proveedorId: widget.proveedorId)
 ```
 
 ### 6.2 Zona B — Ampliación de la sección Certificaciones existente
 
-**Posición:** Dentro del `List.generate` de la línea 2309, reemplazar el `Container` con el placeholder gris (~líneas 2481–2540) por `_buildDocumentRow(...)`.
+**Posición:** Dentro del `List.generate` de la línea 2309, reemplazar el `Container` con el placeholder gris (~líneas 2481–2540) por `_buildDocumentCard(...)`.
 
 ```
-_buildDocumentRow(
-  label: 'Documento de certificación',
-  url: cuentasBancariasItem.documentoUrl,   // var del loop
-  downloadFileName: 'certificacion_${cuentasBancariasItem.id}.pdf',
-  ...
+_buildDocumentCard(
+  label: certItem.entidadCertificadora,
+  url: certItem.documentoUrl,
+  downloadPrefix: 'certificacion',
+  proveedorId: certItem.id,
 )
 ```
+
+Layout de certificaciones: `Wrap` con `spacing: 12`, `runSpacing: 12`. Cada tarjeta tiene el mismo diseño que Zona A.
 
 **Estado vacío de Zona B** (cuando `containerCertificacionesRowList.isEmpty`):  
 Insertar **antes** del `List.generate`:
@@ -193,37 +215,86 @@ if (cuentasBancarias.isEmpty)
   );
 ```
 
-### 6.3 Layout de `_buildDocumentRow`
+### 6.3 Layout de `_buildDocumentCard` ← reemplaza `_buildDocumentRow`
+
+> **Nota:** El helper se renombra a `_buildDocumentCard` para reflejar el diseño en tarjeta. La firma se actualiza en §4.3.
 
 ```
-┌──────────────────────────────────────────────────────┐
-│  [Icon: description 20px]  Label          [Ver] [↓]  │
-│                            — Si URL nula —            │
-│  [Icon: description 20px]  Label   [Badge: No cargado]│
-└──────────────────────────────────────────────────────┘
+┌─────────────────────────────┐
+│  Label (centrado, bold)     │
+├─────────────────────────────┤
+│  ┌─────────────────────┐    │
+│  │   THUMBNAIL         │    │  ← 120px alto
+│  │   (imagen o ícono)  │    │
+│  └─────────────────────┘    │
+│  filename.pdf          ✅   │  ← nombre + check verde si URL presente
+│  ─────────────────────────  │
+│  [ 👁 Ver documento  ]      │  ← botón ancho completo
+│  [ ↓  Descargar      ]      │  ← botón ancho completo
+└─────────────────────────────┘
 ```
 
-Especificación detallada:
+**Especificación detallada:**
 
-- **Contenedor:** `width: double.infinity`, `padding: EdgeInsets.all(12)`, `decoration: BoxDecoration(color: Color(0xFFF0F0EF), borderRadius: 8, border: Border.all(color: tertiary))`.
-- **Row principal:** `MainAxisAlignment.spaceBetween`, `CrossAxisAlignment.center`.
-- **Lado izquierdo:** `Icon(Icons.description_outlined, size: 20, color: secondary)` + `SizedBox(width: 8)` + `Text(label, style: bodyMedium, fontSize: 14)`.
-- **Lado derecho (URL presente):**  
-  - Botón "Ver": `TextButton` con texto `'Ver'`, ícono `Icons.open_in_new` (16px), `onPressed: onView`. Color: `primary`.  
-  - `SizedBox(width: 8)`.  
-  - Botón "Descargar": `TextButton` con texto `'Descargar'`, ícono `Icons.download_outlined` (16px), `onPressed: onDownload`. Si `isDownloading`: reemplazar con `SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))`.
-- **Lado derecho (URL ausente):** `Container(padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: Color(0xFFE0E0E0), borderRadius: 4), child: Text('No cargado', style: bodySmall, color: secondaryText))`.
-- **Separación entre filas:** `SizedBox(height: 10)` (consistente con `.divide(SizedBox(height: 10))` del widget).
+**Contenedor tarjeta:**
+- `width`: calculado por `Wrap` (~30% del ancho disponible, mín. 160px)
+- `decoration`: `color: secondaryBackground`, `borderRadius: 12`, `border: Border.all(color: tertiary)`, `boxShadow: [BoxShadow(blurRadius: 4, color: Colors.black12, offset: Offset(0,2))]`
+- `padding: EdgeInsets.all(12)`
 
-### 6.4 Estados del componente completo
+**Label (encabezado de tarjeta):**
+- `Text(label)`, `fontSize: 14`, `fontWeight: w600`, `color: primary`, `textAlign: center`
+- `padding bottom: 8`
+
+**Thumbnail (zona de 120px de alto):**
+- `ClipRRect(borderRadius: 8)` que contiene:
+  - Si `url == null || url.isEmpty`: `Container(color: Color(0xFFEAEAEA), child: Icon(Icons.insert_drive_file_outlined, size: 40, color: secondaryText))`
+  - Si la URL termina en `.jpg`, `.jpeg`, `.png`, `.webp` (case-insensitive): `Image.network(url, fit: BoxFit.cover, height: 120, width: double.infinity, errorBuilder: → ícono genérico)`
+  - En cualquier otro caso (PDF u otro): `Container(color: Color(0xFFEAEAEA), child: Icon(Icons.picture_as_pdf_outlined, size: 40, color: Color(0xFFD32F2F)))`
+- La detección se hace con `_isImageUrl(String url) → bool` (helper privado, ver §4).
+
+**Fila de nombre de archivo:**
+- `Row(MainAxisAlignment.spaceBetween)`
+  - `Expanded(child: Text(_extractFilename(url), overflow: ellipsis, fontSize: 12, color: secondaryText))`
+  - Si URL presente: `Icon(Icons.check_circle, size: 16, color: Color(0xFF43A047))`
+  - Si URL ausente: `Container(padding: h:6 v:2, color: Color(0xFFE0E0E0), borderRadius:4, child: Text('No cargado', fontSize:11, color: secondaryText))`
+- `padding top: 8, bottom: 8`
+
+**Botones (solo si URL presente):**
+- `SizedBox(width: double.infinity, child: OutlinedButton.icon(icon: Icon(Icons.remove_red_eye_outlined, size:16), label: Text('Ver documento'), onPressed: onView))`
+  - `style`: `side: BorderSide(color: primary)`, `foregroundColor: primary`, `borderRadius: 8`, height 36
+- `SizedBox(height: 6)`
+- `SizedBox(width: double.infinity, child: OutlinedButton.icon(...))`
+  - Cuando `!isDownloading`: `icon: Icon(Icons.download_outlined, size:16)`, `label: Text('Descargar')`, `onPressed: onDownload`
+  - Cuando `isDownloading`: `icon: SizedBox(16×16, CircularProgressIndicator(strokeWidth:2))`, `label: Text('Descargando...')`, `onPressed: null`
+  - `style`: mismo que "Ver documento"
+
+**Si URL ausente:** no se renderizan los botones. Solo aparece el thumbnail vacío y el badge "No cargado".
+
+### 6.4 Helpers de UI adicionales (actualización §4)
+
+```dart
+// Extrae el nombre de archivo del último segmento del path de la URL
+// Ej: "https://xyz.supabase.co/storage/v1/.../cedula/andres_ce.pdf" → "andres_ce.pdf"
+// Si url es null/vacío → "Sin archivo"
+String _extractFilename(String? url)
+
+// Retorna true si la URL apunta a un formato de imagen renderizable
+bool _isImageUrl(String url)
+```
+
+`_extractFilename`: `uri.pathSegments.last` del `Uri.parse(url)`; si lanza excepción, retorna `'Sin archivo'`.  
+`_isImageUrl`: `['.jpg','.jpeg','.png','.webp'].contains(url.toLowerCase().split('?').first.split('.').last)`.
+
+### 6.5 Estados del componente completo
 
 | Estado | Trigger | Render |
 |---|---|---|
 | **Cargando** | `FutureBuilder` snapshot sin datos | `CircularProgressIndicator` (código existente, sin cambios) |
-| **Con documentos** | URL no nula/vacía | Fila con botones "Ver" / "Descargar" |
-| **Sin documento** | URL nula o vacía | Fila con badge "No cargado", sin botones |
-| **Descargando** | `_isDownloading == true` | Spinner inline en lugar del botón "Descargar" |
-| **Sin certificaciones** | Lista vacía | Ícono + texto "Sin certificaciones registradas" |
+| **Con documento — imagen** | URL presente + extensión imagen | `Image.network` como thumbnail + botones Ver/Descargar |
+| **Con documento — PDF/otro** | URL presente + extensión no imagen | Ícono PDF rojo como thumbnail + botones Ver/Descargar |
+| **Sin documento** | URL nula o vacía | Thumbnail con ícono genérico gris + badge "No cargado", sin botones |
+| **Descargando** | `isDownloading == true` | Botón "Descargar" → "Descargando..." con spinner, deshabilitado |
+| **Sin certificaciones** | Lista vacía | Ícono folder_open + texto "Sin certificaciones registradas" |
 
 ---
 
