@@ -23,4 +23,4 @@ if ! command -v flutter &> /dev/null; then
 fi
 
 flutter pub get
-flutter build web --web-renderer html --release
+flutter build web --release
