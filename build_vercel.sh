@@ -16,8 +16,10 @@ cat > assets/environment_values/environment.json << EOF
 }
 EOF
 
+FLUTTER_VERSION="3.35.0"
+
 if ! command -v flutter &> /dev/null; then
-  git clone https://github.com/flutter/flutter.git -b stable --depth 1 /opt/flutter
+  git clone https://github.com/flutter/flutter.git --depth 1 --branch "$FLUTTER_VERSION" /opt/flutter
   export PATH="$PATH:/opt/flutter/bin"
   flutter precache --web
 fi
