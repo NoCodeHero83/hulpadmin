@@ -236,7 +236,7 @@ class _FinalizarServicio2WidgetState extends State<FinalizarServicio2Widget> {
                           _shouldSetState = true;
                           _model.aceptaceToken2 =
                               await actions.getAcceptanceToken(
-                            FFDevEnvironmentValues().publickey,
+                            FFDevEnvironmentValues().publicKey,
                             FFDevEnvironmentValues().isProduction,
                           );
                           _shouldSetState = true;
@@ -246,8 +246,8 @@ class _FinalizarServicio2WidgetState extends State<FinalizarServicio2Widget> {
                           )) {
                             print('[FINALIZAR][METODO_PAGO] paymentSourceId=${_model.resultadosUsuarioMetodoPago!.firstOrNull!.paymentSourceId} precio=${_model.validacion!.firstOrNull!.precio} email=${_model.usuarioServicio2!.firstOrNull!.correoElectronico}');
                             _model.pago2 = await actions.createTransaction(
-                              FFDevEnvironmentValues().privatekey,
-                              FFDevEnvironmentValues().publickey,
+                              FFDevEnvironmentValues().privateKey,
+                              FFDevEnvironmentValues().publicKey,
                               functions.stringToIngete(_model
                                   .resultadosUsuarioMetodoPago!
                                   .firstOrNull!
@@ -496,7 +496,7 @@ class _FinalizarServicio2WidgetState extends State<FinalizarServicio2Widget> {
                           _shouldSetState = true;
                           _model.aceptaceToken =
                               await actions.getAcceptanceToken(
-                            FFDevEnvironmentValues().publickey,
+                            FFDevEnvironmentValues().publicKey,
                             FFDevEnvironmentValues().isProduction,
                           );
                           _shouldSetState = true;
@@ -506,8 +506,8 @@ class _FinalizarServicio2WidgetState extends State<FinalizarServicio2Widget> {
                           )) {
                             print('[FINALIZAR][TARJETA] paymentSourceId=${_model.tarjeta!.firstOrNull!.paymentSourceId} precio=${_model.validacion!.firstOrNull!.precio} email=${_model.usuarioServicio!.firstOrNull!.correoElectronico}');
                             _model.pago = await actions.createTransaction(
-                              FFDevEnvironmentValues().privatekey,
-                              FFDevEnvironmentValues().publickey,
+                              FFDevEnvironmentValues().privateKey,
+                              FFDevEnvironmentValues().publicKey,
                               functions.stringToIngete(
                                   _model.tarjeta!.firstOrNull!.paymentSourceId),
                               getJsonField(

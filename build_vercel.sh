@@ -7,12 +7,13 @@ echo "Ambiente: $([ "$IS_PROD" = "true" ] && echo 'PRODUCCION' || echo 'SANDBOX'
 
 cat > assets/environment_values/environment.json << EOF
 {
-  "privatekey": "${WOMPI_PRIVATE_KEY}",
-  "publickey": "${WOMPI_PUBLIC_KEY}",
+  "privateKey": "${WOMPI_PRIVATE_KEY}",
+  "publicKey": "${WOMPI_PUBLIC_KEY}",
   "isProduction": ${IS_PROD},
   "supabaseUrl": "${SUPABASE_URL}",
   "supabaseAnonKey": "${SUPABASE_ANON_KEY}",
-  "integrityKey": "${WOMPI_INTEGRITY_KEY}"
+  "integrityKey": "${WOMPI_INTEGRITY_KEY}",
+  "n8nWebhookUrl": "${N8N_WEBHOOK_URL}"
 }
 EOF
 

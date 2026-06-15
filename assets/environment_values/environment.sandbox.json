@@ -1,8 +1,0 @@
-{
-  "privatekey": "",
-  "publickey": "",
-  "isProduction": false,
-  "supabaseUrl": "https://ghnyagumduxiimkvieec.supabase.co",
-  "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdobnlhZ3VtZHV4aWlta3ZpZWVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5MTAzMzAsImV4cCI6MjA5NjQ4NjMzMH0.Fl6ECjmsNNVv1srKPBlE9WOwv9vkjeQQpayXNC_O5tY",
-  "integrityKey": ""
-}

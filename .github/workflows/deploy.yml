@@ -22,12 +22,13 @@ jobs:
         run: |
           cat > assets/environment_values/environment.json << EOF
           {
-            "privatekey": "${{ secrets.WOMPI_PRIVATE_KEY }}",
-            "publickey": "${{ secrets.WOMPI_PUBLIC_KEY }}",
+            "privateKey": "${{ secrets.WOMPI_PRIVATE_KEY }}",
+            "publicKey": "${{ secrets.WOMPI_PUBLIC_KEY }}",
             "isProduction": true,
             "supabaseUrl": "${{ secrets.SUPABASE_URL }}",
             "supabaseAnonKey": "${{ secrets.SUPABASE_ANON_KEY }}",
-            "integrityKey": "${{ secrets.WOMPI_INTEGRITY_KEY }}"
+            "integrityKey": "${{ secrets.WOMPI_INTEGRITY_KEY }}",
+            "n8nWebhookUrl": "${{ secrets.N8N_WEBHOOK_URL }}"
           }
           EOF
 
