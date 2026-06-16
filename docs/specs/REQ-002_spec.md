@@ -1,8 +1,19 @@
 # Especificación Técnica — REQ-002
 **Título:** Visualización y descarga de documentos de proveedores desde el panel administrativo  
 **Fecha:** 2026-06-08  
-**Estado:** Borrador — pendiente de implementación  
+**Estado:** Implementado · Ampliado en v2.0.0  
 **Metodología:** Spec Driven Development (SDD)
+
+---
+
+## Control de versiones
+
+| Versión | Fecha | Autor | Cambios |
+|---|---|---|---|
+| v1.0.0 | 2026-06-08 | Equipo Hulp | Versión inicial: Zona A (documentos de registro) y Zona B (certificaciones) dentro del componente `InformacionProveedorWidget` (pop-up). |
+| **v2.0.0** | **2026-06-16** | **Equipo Hulp** | **Migración del pop-up `InformacionProveedorWidget` (invocado vía `showDialog` desde la pantalla `Proveedores2`) a una PÁGINA DEDICADA `DetalleProveedorWidget` con el rediseño visual de referencia (encabezado de perfil, panel de documentos + certificaciones, panel de referencias con acciones Ver/Llamar, datos básicos, facturación, servicios ofrecidos y línea de tiempo de historial de servicios). Ver §11 (Adenda v2.0.0). La lógica de negocio, las consultas existentes y el rendimiento se preservan; el contrato de solo lectura (RN-01) se mantiene.** |
+
+> **Razón del cambio (v2.0.0):** el pop-up resultaba estrecho (máx. 800px) y desbordaba en pantallas reales (overflow visible en el listado de categorías). Convertirlo en página permite el layout de paneles de la imagen de referencia, mejor legibilidad y navegación con breadcrumb, sin tocar la lógica de datos ya validada en v1.0.0.
 
 ---
 
@@ -382,3 +393,141 @@ Los siguientes puntos están **explícitamente excluidos** de este requerimiento
 - **Auditoría de acceso:** no se registra en base de datos que el administrador vio o descargó un documento.
 - **Control de acceso dentro del widget:** la verificación de rol `administrador` es responsabilidad de la capa de navegación, no de este widget.
 - **Soporte offline:** todas las acciones requieren conexión activa.
+
+---
+
+# 11. Adenda v2.0.0 — Migración de pop-up a página dedicada `DetalleProveedor`
+
+## 11.1 Resumen del cambio
+
+Se reemplaza la apertura del pop-up `InformacionProveedorWidget` (vía `showDialog`) al pulsar el **nombre del proveedor** en la pantalla `Proveedores2`, por la navegación a una **página dedicada** `DetalleProveedorWidget`. La página reproduce con fidelidad el diseño de referencia (mockup tipo "perfil de proveedor"): encabezado con foto, estado, servicios principales, fecha de inscripción e ID; panel de documentos y certificaciones; panel de referencias con acciones; bloques de datos básicos, facturación y servicios ofrecidos; y una línea de tiempo de historial de servicios.
+
+**Principios no negociables (heredados del proyecto):**
+- **Cero cambios en lógica de negocio.** Se reutilizan exactamente las mismas consultas y helpers ya validados (`UsuariosTable`, `CuentasBancariasTable`, `CertificacionesTable`, `ReferenciasLaboralesTable`, `ProfesionalServiciosTable`, y los métodos `openDocument` / `downloadDocument`).
+- **Solo lectura (RN-01).** No se agregan controles de edición, creación ni borrado. No se incluye el botón "Agregar referencia" del mockup por requerir lógica de creación inexistente (ver §11.9).
+- **Rendimiento preservado.** Misma estrategia de `FutureBuilder` perezoso; no se introducen `Stream` nuevos. Las dos consultas adicionales (chips de servicios y línea de tiempo) solo se ejecutan al abrir la página de detalle, nunca en el listado.
+- **Patrón FlutterFlow.** Página con par `*_widget.dart` / `*_model.dart`, `routeName`/`routePath` estáticos, registro en `nav.dart` y export en `index.dart`. El menú lateral se reutiliza con `MenuWidget`.
+
+## 11.2 Análisis de impacto
+
+| Archivo | Acción | Justificación |
+|---|---|---|
+| `lib/web/detalle_proveedor/detalle_proveedor_widget.dart` | **Crear** | Nueva página. UI del rediseño. |
+| `lib/web/detalle_proveedor/detalle_proveedor_model.dart` | **Crear** | Modelo de la página: `menuModel`, `downloadingDocs`, `openDocument`, `downloadDocument`, `llamarTelefono`. |
+| `lib/flutter_flow/nav/nav.dart` | **Modificar** | Registrar `FFRoute` de `DetalleProveedorWidget` con parámetros `proveedorId`, `categoriaid`, `categorianombre`. |
+| `lib/index.dart` | **Modificar** | `export` de la nueva página. |
+| `lib/web/proveedores2/proveedores2_widget.dart` | **Modificar** | Cambiar el `onTap` del nombre del proveedor de `showDialog(InformacionProveedorWidget)` a `context.pushNamed(DetalleProveedorWidget.routeName, ...)`. Eliminar el import no usado si corresponde. |
+| `lib/components/informacion_proveedor_widget.dart` | **Sin cambios** | Se conserva intacto como referencia de la lógica de v1.0.0. No se elimina. |
+
+**Archivos que NO se tocan:** auth, otras pantallas, esquema de base de datos, `pubspec.yaml` (todas las dependencias necesarias —`url_launcher`, `http`, `file_saver`, `google_fonts`— ya están declaradas).
+
+## 11.3 Ruta y navegación
+
+- **`routeName`:** `'DetalleProveedor'` · **`routePath`:** `'/detalleProveedor'`.
+- **Parámetros (query):**
+  - `proveedorId` (`String`, requerido) — `profesional_id` / `usuarios.id`.
+  - `categoriaid` (`String`, opcional) — para el botón "Volver al listado" y breadcrumb.
+  - `categorianombre` (`String`, opcional) — para el breadcrumb.
+- **Entrada:** desde `Proveedores2`, `onTap` del nombre →
+  ```
+  context.pushNamed(
+    DetalleProveedorWidget.routeName,
+    queryParameters: {
+      'proveedorId': serializeParam(itemsItem.profesionalId, ParamType.String),
+      'categoriaid': serializeParam(widget!.categoriaid, ParamType.String),
+      'categorianombre': serializeParam(widget!.categorianombre, ParamType.String),
+    }.withoutNulls,
+    extra: <String, dynamic>{ '__transition_info__': TransitionInfo(hasTransition: true, transitionType: PageTransitionType.fade, duration: Duration(milliseconds: 0)) },
+  );
+  ```
+- **Salida ("← Volver al listado" y breadcrumb "Proveedores"):** `context.safePop()` cuando hay pila navegable; si no, `context.pushNamed(Proveedores2Widget.routeName, ...)` con `categoriaid`/`categorianombre`.
+
+## 11.4 Fuentes de datos (todas ya existentes — solo lectura)
+
+| Sección | Origen | Consulta |
+|---|---|---|
+| Encabezado, Datos básicos, Documentos de registro, RUT | `UsuariosTable` | `querySingleRow(id == proveedorId)` |
+| Facturación (entidad, tipo, número de cuenta) | `CuentasBancariasTable` | `querySingleRow(usuario_id == proveedorId)` |
+| Certificaciones | `CertificacionesTable` | `queryRows(usuario_id == proveedorId)` |
+| Referencias | `ReferenciasLaboralesTable` | `queryRows(usuario_id == proveedorId)` |
+| Servicios ofrecidos (seleccionados/no) | `ProfesionalServiciosTable` + `custom_widgets.CrearProveedor` | `queryRows(usuario_id == proveedorId)` (idéntico a v1.0.0) |
+| **Servicios principales (chips header)** — NUEVO | `VwProfesionalesServiciosTable` | `queryRows(profesional_id == proveedorId)` → distintos `servicioNombre` |
+| **Historial de servicios (timeline)** — NUEVO | `VwSolicitudesServiciosCompletaTable` | `queryRows(profesional_id == proveedorId)` |
+
+## 11.5 ID de proveedor (derivado, solo presentación)
+
+Como `usuarios` no tiene un código formateado, el "ID de proveedor" se **deriva en UI** (no se persiste):
+
+```
+PROV-{año}-{idUsuario con padding a 4 dígitos}
+  año     = fechaRegistro?.year ?? año actual
+  idUsuario = usuarios.id_usuario (int)
+Ej.: fechaRegistro=2025, id_usuario=158  ->  "PROV-2025-0158"
+```
+
+Si `id_usuario` es nulo, se muestra `PROV-{año}-----`.
+
+## 11.6 Especificación de UI (fiel al mockup)
+
+Paleta tomada de `FlutterFlowTheme` y de los colores ya usados en el proyecto:
+`primary #0B6244` (verde), `success #18AC4C`, `secondaryBackground #FFFFFF`, `primaryBackground #FBF8F4`, breadcrumb `#5E252B`, chip verde fondo `#DFF9D2` / texto `#18AC4C`, badge "Activo" fondo `#DFF9D2` texto `#18AC4C`, badge "Inactivo" fondo `#FFE9CC` texto `#D6A100`, enlaces `#0D70E7`.
+
+**Estructura general:** `Scaffold` → `Row[ MenuWidget , Expanded(SingleChildScrollView) ]`. Ancho de contenido fluido con `padding` de 24–40px. Todas las tarjetas: `secondaryBackground`, `borderRadius 16`, borde `#7C766C` 0.5, sombra suave.
+
+1. **Barra superior:** breadcrumb `Proveedores  ›  {nombre}` (izq., estilo itálico `#5E252B`) y botón `← Volver al listado` (der., contorno gris, `borderRadius 8`).
+2. **Tarjeta de encabezado** (3 zonas en `Row` responsivo):
+   - Izq.: avatar circular 96–100px (`fotoPerfilUrl`, fallback placeholder), nombre (22px bold `primaryText`), badge de estado (`Activo`/`Inactivo` según `disponibilidad`/`verificado` — ver §11.8), y fila de meta: ubicación (`ciudad, pais`), teléfono, Instagram (`redesSociales[0]` o "Sin Instagram"), Facebook (`redesSociales[1]` o "Sin Facebook"), cada uno con su ícono.
+   - Centro: rótulo "Servicios principales" + `Wrap` de chips verdes (ícono check + `servicioNombre`), máximo 4 visibles y chip "+N" si hay más.
+   - Der.: "Inscripción recibida" + `fechaRegistro` (`dd MMM, yyyy`, locale es) y "ID de proveedor" + valor derivado (§11.5, en `primary` bold).
+3. **Fila media** (`Row`, en móvil `Column`):
+   - **Documentos** (flex 2): título "Documentos" + badge "X/5 cargados" (cuenta de URLs no vacías entre cédula, cuenta bancaria, contrato y certificaciones con `documentoUrl`). Subsección "Documentos de registro": tarjetas Cédula / Cuenta bancaria / Contrato usando el helper `_buildDocumentCard` (idéntico a v1.0.0: thumbnail, nombre, check, "Ver documento", "Descargar", estado descargando). Subsección "Certificaciones": tarjetas por cada certificación con `documentoUrl` válido; estado vacío con ícono `workspace_premium_outlined` y texto.
+   - **Referencias** (flex 1): título "Referencias". Por cada `ReferenciasLaboralesRow`: avatar con iniciales, `nombreReferencia` (bold), `telefonoReferencia` (en `primary`), `relacionLaboral` (gris), y botones **"Ver"** (ícono ojo) y **"Llamar"** (ícono teléfono). Estado vacío: "Sin referencias registradas".
+4. **Fila inferior** (`Row` de 3 columnas, responsivo a `Column`):
+   - **Datos básicos:** tipo de documento, número de documento, instagram, facebook, dirección, país — como texto de solo lectura (label gris + valor bold), sin `TextFormField` ni dropdowns.
+   - **Facturación:** entidad, tipo de cuenta, número de cuenta (de `CuentasBancarias`), RUT (`registroTributario`) — texto de solo lectura.
+   - **Servicios ofrecidos:** se reutiliza `custom_widgets.CrearProveedor` con `serviciosid` = lista de `servicioId` de `ProfesionalServicios` y `action: (_) async {}` (idéntico a v1.0.0; conserva la vista seleccionados/no seleccionados).
+5. **Historial de servicios** (timeline): título + `SingleChildScrollView` horizontal con nodos conectados por líneas. Cada nodo: ícono circular verde, etiqueta de estado (mapeo §11.8), `servicioNombre`, `Cliente: {clienteNombreCompleto}` y `fecha`+`hora`. Si la lista está vacía: "Sin historial de servicios".
+
+## 11.7 Acciones de la página
+
+| Acción | Implementación | Notas |
+|---|---|---|
+| Ver documento | `_model.openDocument(url)` (reutilizado) | `launchUrl(externalApplication)` |
+| Descargar documento | `_model.downloadDocument(url, fileName)` (reutilizado) | `http.get` + `FileSaver`; flag por documento en `downloadingDocs` |
+| **Llamar** (referencia) | `_model.llamarTelefono(tel)` → `launchUrl(Uri(scheme:'tel', path: tel))` | NUEVO helper; solo presentación, no toca BD |
+| **Ver** (referencia) | Diálogo de solo lectura con `nombreReferencia`, `telefonoReferencia`, `relacionLaboral` | No hay documento de referencia; solo muestra datos existentes |
+| Volver al listado / breadcrumb | `context.safePop()` con fallback a `Proveedores2` | — |
+
+## 11.8 Mapeos de estado (sin cambios de datos)
+
+- **Badge de proveedor:** "Activo" si `disponibilidad == true`; en caso contrario "Inactivo" (colores §11.6). *(Se respeta el dato tal cual; no se calcula nada nuevo.)*
+- **Estado en timeline** (`estado_solicitud`): `finalizadas`→"Servicio completado", `aceptadas`→"Servicio activo", `entrantes`→"Pendiente", `canceladas`→"Cancelado", otro→"Reprogramado/En curso". Idéntico al mapeo ya usado en `HistorialServiciosWidget`.
+
+## 11.9 Criterios de aceptación (v2.0.0)
+
+| ID | Afirmación |
+|---|---|
+| CA2-01 | Al pulsar el nombre de un proveedor en `Proveedores2` se navega a `/detalleProveedor` con `proveedorId` correcto (ya no se abre el pop-up). |
+| CA2-02 | El encabezado muestra foto, nombre, badge de estado, ubicación, teléfono, redes, "Inscripción recibida" y "ID de proveedor" derivado `PROV-AAAA-####`. |
+| CA2-03 | Los chips de "Servicios principales" muestran hasta 4 `servicioNombre` y "+N" cuando hay más. |
+| CA2-04 | El panel de Documentos conserva exactamente el comportamiento de v1.0.0 (Ver/Descargar/estados/empty), incluida la subsección Certificaciones. |
+| CA2-05 | El panel de Referencias lista cada referencia con "Ver" y "Llamar"; "Llamar" invoca `launchUrl(tel:)`. |
+| CA2-06 | "Datos básicos" y "Facturación" se muestran como texto de solo lectura, sin campos editables. |
+| CA2-07 | "Servicios ofrecidos" se renderiza con `CrearProveedor` y los `servicioId` del proveedor (sin cambios de lógica). |
+| CA2-08 | La línea de tiempo muestra los servicios del proveedor con estado, cliente y fecha; vacío → mensaje. |
+| CA2-09 | "Volver al listado" regresa a `Proveedores2`. |
+| CA2-10 | El proyecto compila sin errores; `InformacionProveedorWidget` permanece intacto; no se introducen `Stream` nuevos. |
+
+## 11.10 Riesgos y supuestos (v2.0.0)
+
+- **S2-01.** `disponibilidad` es la fuente del estado Activo/Inactivo (consistente con el listado, que muestra "Inactivo" por defecto). Si el negocio define el estado por otra columna, se ajusta el mapeo en un único punto (§11.8) sin cambios estructurales.
+- **S2-02.** `launchUrl(tel:)` abre el marcador en móvil/desktop; en Flutter Web puede no tener handler, en cuyo caso se captura la excepción y se muestra `SnackBar` (mismo patrón que documentos).
+- **R2-01.** Dos `FutureBuilder` adicionales (chips + timeline) por apertura de detalle. Mitigación: solo corren en la página de detalle, no en el listado; lectura ligera.
+- **R2-02.** El import de `InformacionProveedorWidget` en `Proveedores2` queda sin uso tras el cambio. Mitigación: se elimina dicho import si ningún otro uso permanece, para evitar warnings.
+
+## 11.11 Out of scope (v2.0.0)
+
+- Crear/editar/eliminar referencias ("Agregar referencia" del mockup) — requeriría lógica de escritura inexistente.
+- Edición de cualquier dato del proveedor desde la página.
+- Cambios en el esquema de base de datos o en vistas de Supabase.
+- Eliminación del componente `InformacionProveedorWidget`.

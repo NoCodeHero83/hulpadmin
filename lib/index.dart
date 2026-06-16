@@ -7,6 +7,8 @@ export '/web/categorias/categorias_widget.dart' show CategoriasWidget;
 export '/web/subcategoria/subcategoria_widget.dart' show SubcategoriaWidget;
 export '/web/servicios/servicios_widget.dart' show ServiciosWidget;
 export '/web/proveedores2/proveedores2_widget.dart' show Proveedores2Widget;
+export '/web/detalle_proveedor/detalle_proveedor_widget.dart'
+    show DetalleProveedorWidget;
 export '/web/registro_proveedores/registro_proveedores_widget.dart'
     show RegistroProveedoresWidget;
 export '/web/solicitudes_rechazadas/solicitudes_rechazadas_widget.dart'

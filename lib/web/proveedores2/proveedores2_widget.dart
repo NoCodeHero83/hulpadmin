@@ -1,7 +1,6 @@
 import '/backend/supabase/supabase.dart';
 import '/components/editar_proveedor_widget.dart';
 import '/components/historial_servicios_widget.dart';
-import '/components/informacion_proveedor_widget.dart';
 import '/components/notificacion2_widget.dart';
 import '/flutter_flow/flutter_flow_drop_down.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -936,26 +935,37 @@ class _Proveedores2WidgetState extends State<Proveedores2Widget> {
                                                                             Colors.transparent,
                                                                         onTap:
                                                                             () async {
-                                                                          await showDialog(
-                                                                            context:
-                                                                                context,
-                                                                            builder:
-                                                                                (dialogContext) {
-                                                                              return Dialog(
-                                                                                elevation: 0,
-                                                                                insetPadding: EdgeInsets.zero,
-                                                                                backgroundColor: Colors.transparent,
-                                                                                alignment: AlignmentDirectional(0.0, 0.0).resolve(Directionality.of(context)),
-                                                                                child: GestureDetector(
-                                                                                  onTap: () {
-                                                                                    FocusScope.of(dialogContext).unfocus();
-                                                                                    FocusManager.instance.primaryFocus?.unfocus();
-                                                                                  },
-                                                                                  child: InformacionProveedorWidget(
-                                                                                    proveedorId: itemsItem.profesionalId!,
-                                                                                  ),
-                                                                                ),
-                                                                              );
+                                                                          // REQ-002 v2.0.0: el pop-up se reemplaza por la página DetalleProveedor.
+                                                                          context
+                                                                              .pushNamed(
+                                                                            DetalleProveedorWidget
+                                                                                .routeName,
+                                                                            queryParameters:
+                                                                                {
+                                                                              'proveedorId':
+                                                                                  serializeParam(
+                                                                                itemsItem.profesionalId,
+                                                                                ParamType.String,
+                                                                              ),
+                                                                              'categoriaid':
+                                                                                  serializeParam(
+                                                                                widget!.categoriaid,
+                                                                                ParamType.String,
+                                                                              ),
+                                                                              'categorianombre':
+                                                                                  serializeParam(
+                                                                                widget!.categorianombre,
+                                                                                ParamType.String,
+                                                                              ),
+                                                                            }.withoutNulls,
+                                                                            extra: <String,
+                                                                                dynamic>{
+                                                                              '__transition_info__':
+                                                                                  TransitionInfo(
+                                                                                hasTransition: true,
+                                                                                transitionType: PageTransitionType.fade,
+                                                                                duration: Duration(milliseconds: 0),
+                                                                              ),
                                                                             },
                                                                           );
                                                                         },
