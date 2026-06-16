@@ -47,6 +47,8 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
   static const Color _cardBorder = Color(0x7C766C4D);
   static const Color _labelGray = Color(0xFF4A4A4A);
   static const Color _valueGray = Color(0xFF606060);
+  // REQ-002 v2.0.3: color de los labels de campo, fiel al diseño.
+  static const Color _labelBlue = Color(0xFF133CC2);
 
   @override
   void initState() {
@@ -326,6 +328,14 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
     );
   }
 
+  /// Devuelve el valor solo si es un dato real del backend; null si está
+  /// ausente o vacío (para evitar mostrar valores mock/placeholder).
+  String? _valorReal(String? value) {
+    if (value == null) return null;
+    final v = value.trim();
+    return v.isEmpty ? null : v;
+  }
+
   /// Bloque label + valor de solo lectura (Datos básicos / Facturación).
   Widget _infoText(BuildContext context, String label, String? value,
       {Color? valueColor}) {
@@ -335,10 +345,11 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
         Text(
           label,
           style: FlutterFlowTheme.of(context).bodySmall.override(
-                font: GoogleFonts.inter(),
+                font: GoogleFonts.inter(fontWeight: FontWeight.w500),
                 fontSize: 13,
                 letterSpacing: 0,
-                color: FlutterFlowTheme.of(context).secondaryText,
+                fontWeight: FontWeight.w500,
+                color: _labelBlue,
               ),
         ),
         const SizedBox(height: 2),
@@ -1106,9 +1117,258 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
               );
             },
           ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Agregar referencia'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: FlutterFlowTheme.of(context).primary,
+                side: BorderSide(color: FlutterFlowTheme.of(context).primary),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                textStyle: GoogleFonts.inter(
+                    fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+              onPressed: () => _agregarReferenciaDialog(context),
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  /// REQ-002 v2.0.3: pop-up con formulario para agregar una referencia laboral.
+  /// Inserta en `referencias_laborales` y refresca el listado.
+  void _agregarReferenciaDialog(BuildContext context) {
+    final formKey = GlobalKey<FormState>();
+    final nombreCtrl = TextEditingController();
+    final telCtrl = TextEditingController();
+    final relCtrl = TextEditingController();
+    bool saving = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setLocal) {
+            Widget field(String label, TextEditingController c,
+                {TextInputType? keyboard}) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: FlutterFlowTheme.of(ctx).bodySmall.override(
+                          font: GoogleFonts.inter(fontWeight: FontWeight.w500),
+                          fontSize: 13,
+                          letterSpacing: 0,
+                          fontWeight: FontWeight.w500,
+                          color: _labelBlue,
+                        ),
+                  ),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: c,
+                    keyboardType: keyboard,
+                    enabled: !saving,
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? 'Campo obligatorio'
+                        : null,
+                    decoration: InputDecoration(
+                      isDense: true,
+                      filled: true,
+                      fillColor: const Color(0xFFFBFAF9),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 12),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                            color: FlutterFlowTheme.of(ctx).alternate,
+                            width: 0.5),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                            color: FlutterFlowTheme.of(ctx).primary, width: 1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      errorBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                            color: FlutterFlowTheme.of(ctx).error, width: 0.5),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      focusedErrorBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                            color: FlutterFlowTheme.of(ctx).error, width: 1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    style: GoogleFonts.inter(fontSize: 15),
+                  ),
+                ],
+              );
+            }
+
+            return Dialog(
+              insetPadding: const EdgeInsets.all(24),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.person_add_alt_1_outlined,
+                                    size: 20,
+                                    color: FlutterFlowTheme.of(ctx).primary),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Agregar referencia',
+                                  style: FlutterFlowTheme.of(ctx)
+                                      .bodyMedium
+                                      .override(
+                                        font: GoogleFonts.inter(
+                                            fontWeight: FontWeight.w700),
+                                        fontSize: 18,
+                                        letterSpacing: 0,
+                                        fontWeight: FontWeight.w700,
+                                        color: FlutterFlowTheme.of(ctx)
+                                            .primaryText,
+                                      ),
+                                ),
+                              ],
+                            ),
+                            InkWell(
+                              borderRadius: BorderRadius.circular(20),
+                              onTap: saving
+                                  ? null
+                                  : () => Navigator.of(ctx).pop(),
+                              child: Icon(Icons.close,
+                                  size: 22,
+                                  color:
+                                      FlutterFlowTheme.of(ctx).secondaryText),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        field('Nombre *', nombreCtrl),
+                        const SizedBox(height: 14),
+                        field('Teléfono *', telCtrl,
+                            keyboard: TextInputType.phone),
+                        const SizedBox(height: 14),
+                        field('Relación *', relCtrl),
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: _valueGray,
+                                side:
+                                    const BorderSide(color: Color(0xFF8A8A8A)),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20, vertical: 12),
+                              ),
+                              onPressed: saving
+                                  ? null
+                                  : () => Navigator.of(ctx).pop(),
+                              child: const Text('Cancelar'),
+                            ),
+                            const SizedBox(width: 12),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    FlutterFlowTheme.of(ctx).primary,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 24, vertical: 12),
+                                textStyle: GoogleFonts.inter(
+                                    fontSize: 14, fontWeight: FontWeight.w600),
+                              ),
+                              onPressed: saving
+                                  ? null
+                                  : () async {
+                                      if (!formKey.currentState!.validate()) {
+                                        return;
+                                      }
+                                      setLocal(() => saving = true);
+                                      try {
+                                        await ReferenciasLaboralesTable()
+                                            .insert({
+                                          'usuario_id': widget.proveedorId,
+                                          'nombre_referencia':
+                                              nombreCtrl.text.trim(),
+                                          'telefono_referencia':
+                                              telCtrl.text.trim(),
+                                          'relacion_laboral':
+                                              relCtrl.text.trim(),
+                                        });
+                                        if (ctx.mounted) {
+                                          Navigator.of(ctx).pop();
+                                        }
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(const SnackBar(
+                                            content: Text(
+                                                'Referencia agregada correctamente'),
+                                          ));
+                                          safeSetState(() {});
+                                        }
+                                      } catch (_) {
+                                        setLocal(() => saving = false);
+                                        if (ctx.mounted) {
+                                          ScaffoldMessenger.of(ctx)
+                                              .showSnackBar(const SnackBar(
+                                            content: Text(
+                                                'No se pudo agregar la referencia'),
+                                          ));
+                                        }
+                                      }
+                                    },
+                              child: saving
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white),
+                                    )
+                                  : const Text('Guardar'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    ).whenComplete(() {
+      nombreCtrl.dispose();
+      telCtrl.dispose();
+      relCtrl.dispose();
+    });
   }
 
   Widget _referenceItem(BuildContext context, ReferenciasLaboralesRow r) {
@@ -1356,13 +1616,18 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
                   ),
                 )
               else ...[
-                _infoText(context, 'Entidad', cuenta?.entidadBancaria),
+                // REQ-002 v2.0.3: si no hay entidad real en backend, se muestra
+                // el estado vacío ("—"); nunca un valor mock por defecto.
+                _infoText(context, 'Entidad', _valorReal(cuenta?.entidadBancaria)),
                 const SizedBox(height: 14),
-                _infoText(context, 'Tipo de cuenta', cuenta?.tipoCuenta),
+                _infoText(
+                    context, 'Tipo de cuenta', _valorReal(cuenta?.tipoCuenta)),
                 const SizedBox(height: 14),
-                _infoText(context, 'Número de cuenta', cuenta?.numeroCuenta),
+                _infoText(context, 'Número de cuenta',
+                    _valorReal(cuenta?.numeroCuenta)),
                 const SizedBox(height: 14),
-                _infoText(context, 'RUT', usuario?.registroTributario),
+                _infoText(context, 'RUT',
+                    _valorReal(usuario?.registroTributario)),
               ],
             ],
           );

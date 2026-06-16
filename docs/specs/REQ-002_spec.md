@@ -14,6 +14,7 @@
 | **v2.0.0** | **2026-06-16** | **Equipo Hulp** | **Migración del pop-up `InformacionProveedorWidget` (invocado vía `showDialog` desde la pantalla `Proveedores2`) a una PÁGINA DEDICADA `DetalleProveedorWidget` con el rediseño visual de referencia (encabezado de perfil, panel de documentos + certificaciones, panel de referencias con acciones Ver/Llamar, datos básicos, facturación, servicios ofrecidos y línea de tiempo de historial de servicios). Ver §11 (Adenda v2.0.0). La lógica de negocio, las consultas existentes y el rendimiento se preservan; el contrato de solo lectura (RN-01) se mantiene.** |
 | **v2.0.1** | **2026-06-16** | **Equipo Hulp** | **Ajuste de fidelidad en "Servicios ofrecidos": se reemplaza el widget de árbol con checkboxes (`custom_widgets.CrearProveedor`, que desbordaba y no correspondía al diseño) por etiquetas planas agrupadas en "Servicios seleccionados" (chip verde + check) y "No seleccionados" (chip gris + X), según el diseño de referencia. Misma lógica de datos: se carga el catálogo completo de `servicios` y se marca como seleccionado el servicio cuyo id esté en `profesional_servicios` del proveedor. Ver §11.6 (actualizado). Solo presentación; sin cambios de negocio.** |
 | **v2.0.2** | **2026-06-16** | **Equipo Hulp** | **UX de "Servicios ofrecidos": (a) se mueve a su propia fila a ancho completo (ya no comparte fila con Datos básicos/Facturación) para dar más espacio horizontal a las etiquetas; (b) cada grupo (seleccionados / no seleccionados) muestra hasta `_maxChipsVisible = 12` etiquetas y, si hay más, un chip "Ver más (N)" que abre un pop-up con TODAS las etiquetas de ese grupo y scroll interno (alto máx. 80% de la pantalla, ancho máx. 640px). Solo presentación; sin cambios de negocio.** |
+| **v2.0.3** | **2026-06-16** | **Equipo Hulp** | **(a) Se agrega el botón "+ Agregar referencia" en el panel de Referencias, que abre un pop-up con formulario (Nombre, Teléfono, Relación, todos obligatorios) e **inserta** un registro en `referencias_laborales` (`usuario_id`, `nombre_referencia`, `telefono_referencia`, `relacion_laboral`), refrescando el listado al guardar. Esto introduce la ÚNICA operación de escritura del REQ y constituye una excepción explícita a RN-01 (ver RN2-01). (b) Facturación: los campos (Entidad, Tipo de cuenta, Número de cuenta, RUT) muestran estado vacío ("—") cuando el dato no existe o está vacío/espacios en el backend; nunca un valor mock/placeholder (helper `_valorReal`). (c) Los labels de campo se muestran en azul `#133CC2` (Inter, peso 500), fiel al diseño.** |
 
 > **Razón del cambio (v2.0.0):** el pop-up resultaba estrecho (máx. 800px) y desbordaba en pantallas reales (overflow visible en el listado de categorías). Convertirlo en página permite el layout de paneles de la imagen de referencia, mejor legibilidad y navegación con breadcrumb, sin tocar la lógica de datos ya validada en v1.0.0.
 
@@ -527,9 +528,15 @@ Paleta tomada de `FlutterFlowTheme` y de los colores ya usados en el proyecto:
 - **R2-01.** Dos `FutureBuilder` adicionales (chips + timeline) por apertura de detalle. Mitigación: solo corren en la página de detalle, no en el listado; lectura ligera.
 - **R2-02.** El import de `InformacionProveedorWidget` en `Proveedores2` queda sin uso tras el cambio. Mitigación: se elimina dicho import si ningún otro uso permanece, para evitar warnings.
 
+## 11.12 Reglas de negocio adicionales (v2.0.3)
+
+- **RN2-01 — Excepción a solo lectura para Referencias.** La página es de solo lectura salvo por la acción "Agregar referencia", que inserta en `referencias_laborales`. El formulario valida que Nombre, Teléfono y Relación no estén vacíos antes de insertar. No se permite editar ni eliminar referencias existentes (fuera de alcance). Tras una inserción exitosa se refresca el listado (`safeSetState`).
+- **RN2-02 — Sin valores mock.** Los campos de Facturación solo muestran datos provenientes del backend; si el valor es nulo o vacío/espacios, se muestra el estado vacío "—" (helper `_valorReal`). No se usan valores por defecto/placeholder de negocio.
+- **RN2-03 — Color de labels.** Los labels de campo usan `#133CC2` (Inter, peso 500), conforme al diseño.
+
 ## 11.11 Out of scope (v2.0.0)
 
-- Crear/editar/eliminar referencias ("Agregar referencia" del mockup) — requeriría lógica de escritura inexistente.
+- Editar o eliminar referencias existentes (solo se permite agregar, v2.0.3).
 - Edición de cualquier dato del proveedor desde la página.
 - Cambios en el esquema de base de datos o en vistas de Supabase.
 - Eliminación del componente `InformacionProveedorWidget`.
