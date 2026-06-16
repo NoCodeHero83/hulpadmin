@@ -3,7 +3,6 @@ import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/web/menu/menu_widget.dart';
 import 'dart:math' show min;
-import '/custom_code/widgets/index.dart' as custom_widgets;
 import '/index.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -487,6 +486,8 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
                             _buildMiddleRow(context, usuario),
                             const SizedBox(height: 24),
                             _buildLowerRow(context, usuario),
+                            const SizedBox(height: 24),
+                            _buildServiciosOfrecidosCard(context),
                             const SizedBox(height: 24),
                             _buildHistorial(context),
                           ],
@@ -1274,15 +1275,12 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
         final narrow = constraints.maxWidth < 900;
         final datos = _buildDatosBasicosCard(context, usuario);
         final factura = _buildFacturacionCard(context, usuario);
-        final servicios = _buildServiciosOfrecidosCard(context);
         if (narrow) {
           return Column(
             children: [
               datos,
               const SizedBox(height: 24),
               factura,
-              const SizedBox(height: 24),
-              servicios,
             ],
           );
         }
@@ -1292,8 +1290,6 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
             Expanded(child: datos),
             const SizedBox(width: 24),
             Expanded(child: factura),
-            const SizedBox(width: 24),
-            Expanded(child: servicios),
           ],
         );
       },
@@ -1375,10 +1371,14 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
     );
   }
 
-  /// Servicios ofrecidos — reutiliza el custom widget de FlutterFlow tal cual
-  /// (REQ-002 v2.0.0 §11.6, sin cambios de lógica respecto a v1.0.0).
+  /// Servicios ofrecidos — REQ-002 v2.0.1: se presenta como etiquetas planas
+  /// (seleccionados / no seleccionados) según el diseño de referencia.
+  /// Misma lógica de datos que el widget custom v1.0.0: se carga el catálogo
+  /// completo de `servicios` y se marca como seleccionado cada servicio cuyo
+  /// id esté entre los del proveedor (`profesional_servicios`).
   Widget _buildServiciosOfrecidosCard(BuildContext context) {
     return Container(
+      width: double.infinity,
       decoration: _cardDecoration,
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -1389,38 +1389,327 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
             future: ProfesionalServiciosTable().queryRows(
               queryFn: (q) => q.eqOrNull('usuario_id', widget.proveedorId),
             ),
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) {
-                return Center(
-                  child: SizedBox(
-                    width: 40,
-                    height: 40,
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        FlutterFlowTheme.of(context).primary,
-                      ),
-                    ),
-                  ),
-                );
+            builder: (context, snapProf) {
+              if (!snapProf.hasData) {
+                return _serviciosLoader(context);
               }
-              final servicios = snapshot.data!;
-              return LayoutBuilder(
-                builder: (context, c) {
-                  final w = c.maxWidth.isFinite ? c.maxWidth : 300.0;
-                  return SizedBox(
-                    width: w,
-                    height: 300,
-                    child: custom_widgets.CrearProveedor(
-                      width: w,
-                      height: 300,
-                      serviciosid:
-                          servicios.map((e) => e.servicioId).toList(),
-                      action: (serviciosidsss) async {},
-                    ),
+              final seleccionadosIds =
+                  snapProf.data!.map((e) => e.servicioId).toSet();
+
+              return FutureBuilder<List<ServiciosRow>>(
+                future: ServiciosTable().queryRows(queryFn: (q) => q),
+                builder: (context, snapServ) {
+                  if (!snapServ.hasData) {
+                    return _serviciosLoader(context);
+                  }
+                  // Distintos por nombre, preservando orden de aparición.
+                  final vistos = <String>{};
+                  final seleccionados = <String>[];
+                  final noSeleccionados = <String>[];
+                  for (final s in snapServ.data!) {
+                    final nombre = s.nombre;
+                    if (nombre.isEmpty || !vistos.add(nombre)) continue;
+                    if (seleccionadosIds.contains(s.id)) {
+                      seleccionados.add(nombre);
+                    } else {
+                      noSeleccionados.add(nombre);
+                    }
+                  }
+
+                  if (seleccionados.isEmpty && noSeleccionados.isEmpty) {
+                    return _emptyState(context, Icons.handyman_outlined,
+                        'Sin servicios registrados');
+                  }
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _grupoServicios(
+                        context,
+                        titulo: 'Servicios seleccionados',
+                        nombres: seleccionados,
+                        seleccionado: true,
+                      ),
+                      const SizedBox(height: 18),
+                      _grupoServicios(
+                        context,
+                        titulo: 'No seleccionados',
+                        nombres: noSeleccionados,
+                        seleccionado: false,
+                      ),
+                    ],
                   );
                 },
               );
             },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _serviciosLoader(BuildContext context) => Center(
+        child: SizedBox(
+          width: 40,
+          height: 40,
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(
+              FlutterFlowTheme.of(context).primary,
+            ),
+          ),
+        ),
+      );
+
+  /// Máximo de etiquetas visibles por grupo antes de mostrar "Ver más…".
+  static const int _maxChipsVisible = 12;
+
+  /// Grupo de servicios (título + etiquetas con "Ver más…" si exceden el tope).
+  Widget _grupoServicios(
+    BuildContext context, {
+    required String titulo,
+    required List<String> nombres,
+    required bool seleccionado,
+  }) {
+    final tituloColor = seleccionado
+        ? FlutterFlowTheme.of(context).primary
+        : FlutterFlowTheme.of(context).secondaryText;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              titulo,
+              style: FlutterFlowTheme.of(context).bodySmall.override(
+                    font: GoogleFonts.inter(fontWeight: FontWeight.w500),
+                    fontSize: 13,
+                    letterSpacing: 0,
+                    fontWeight: FontWeight.w500,
+                    color: tituloColor,
+                  ),
+            ),
+            if (nombres.isNotEmpty) ...[
+              const SizedBox(width: 6),
+              Text(
+                '(${nombres.length})',
+                style: FlutterFlowTheme.of(context).bodySmall.override(
+                      font: GoogleFonts.inter(),
+                      fontSize: 12,
+                      letterSpacing: 0,
+                      color: FlutterFlowTheme.of(context).secondaryText,
+                    ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 10),
+        if (nombres.isEmpty)
+          Text(
+            'Ninguno',
+            style: FlutterFlowTheme.of(context).bodySmall.override(
+                  font: GoogleFonts.inter(),
+                  fontSize: 12,
+                  letterSpacing: 0,
+                  color: FlutterFlowTheme.of(context).secondaryText,
+                ),
+          )
+        else
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              ...nombres
+                  .take(_maxChipsVisible)
+                  .map((n) => _servicioTag(context, n, seleccionado: seleccionado)),
+              if (nombres.length > _maxChipsVisible)
+                _verMasChip(
+                  context,
+                  'Ver más (${nombres.length - _maxChipsVisible})',
+                  () => _verTodosServiciosDialog(
+                    context,
+                    titulo: titulo,
+                    nombres: nombres,
+                    seleccionado: seleccionado,
+                  ),
+                ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  /// Chip de acción "Ver más…" (estilo contorno, color primario).
+  Widget _verMasChip(BuildContext context, String label, VoidCallback onTap) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: FlutterFlowTheme.of(context).secondaryBackground,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: FlutterFlowTheme.of(context).primary),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: FlutterFlowTheme.of(context).bodySmall.override(
+                    font: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                    fontSize: 13,
+                    letterSpacing: 0,
+                    fontWeight: FontWeight.w600,
+                    color: FlutterFlowTheme.of(context).primary,
+                  ),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.expand_more,
+                size: 16, color: FlutterFlowTheme.of(context).primary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Pop-up con TODOS los servicios del grupo, con scroll interno.
+  void _verTodosServiciosDialog(
+    BuildContext context, {
+    required String titulo,
+    required List<String> nombres,
+    required bool seleccionado,
+  }) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        final screen = MediaQuery.sizeOf(ctx);
+        return Dialog(
+          insetPadding: const EdgeInsets.all(24),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16)),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 640,
+              maxHeight: screen.height * 0.8,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Flexible(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              seleccionado
+                                  ? Icons.check_circle_outline
+                                  : Icons.cancel_outlined,
+                              size: 20,
+                              color: seleccionado
+                                  ? _chipText
+                                  : const Color(0xFF8A8A8A),
+                            ),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                '$titulo (${nombres.length})',
+                                style: FlutterFlowTheme.of(ctx)
+                                    .bodyMedium
+                                    .override(
+                                      font: GoogleFonts.inter(
+                                          fontWeight: FontWeight.w700),
+                                      fontSize: 18,
+                                      letterSpacing: 0,
+                                      fontWeight: FontWeight.w700,
+                                      color: FlutterFlowTheme.of(ctx)
+                                          .primaryText,
+                                    ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(20),
+                        onTap: () => Navigator.of(ctx).pop(),
+                        child: Icon(Icons.close,
+                            size: 22,
+                            color: FlutterFlowTheme.of(ctx).secondaryText),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: nombres
+                            .map((n) => _servicioTag(ctx, n,
+                                seleccionado: seleccionado))
+                            .toList(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: _valueGray,
+                        side: const BorderSide(color: Color(0xFF8A8A8A)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 10),
+                      ),
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      child: const Text('Cerrar'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Etiqueta de servicio (seleccionado = verde con check; no = gris con X).
+  Widget _servicioTag(BuildContext context, String nombre,
+      {required bool seleccionado}) {
+    final bg = seleccionado ? _chipBg : const Color(0xFFF0F0EF);
+    final fg = seleccionado ? _chipText : const Color(0xFF8A8A8A);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            seleccionado ? Icons.check_circle_outline : Icons.close,
+            size: 15,
+            color: fg,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            nombre,
+            style: FlutterFlowTheme.of(context).bodySmall.override(
+                  font: GoogleFonts.inter(fontWeight: FontWeight.w500),
+                  fontSize: 13,
+                  letterSpacing: 0,
+                  fontWeight: FontWeight.w500,
+                  color: fg,
+                ),
           ),
         ],
       ),
