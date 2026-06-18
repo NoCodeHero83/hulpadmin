@@ -2,6 +2,9 @@ import '/backend/supabase/supabase.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/web/menu/menu_widget.dart';
+import '/flutter_flow/upload_data.dart';
+import '/components/notificacion2_widget.dart';
+import '/components/notificacioneliminar_widget.dart';
 import 'dart:math' show min;
 import '/index.dart';
 import 'package:flutter/material.dart';
@@ -306,7 +309,8 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
     return 'PROV-$anio-$padded';
   }
 
-  Widget _sectionTitle(BuildContext context, IconData icon, String texto) {
+  Widget _sectionTitle(BuildContext context, IconData icon, String texto,
+      {VoidCallback? onEdit}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
@@ -323,9 +327,1263 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
                   color: FlutterFlowTheme.of(context).primaryText,
                 ),
           ),
+          if (onEdit != null) ...[
+            const Spacer(),
+            _editIconButton(context, onEdit),
+          ],
         ],
       ),
     );
+  }
+
+  /// REQ-007: ícono de lápiz reutilizable para abrir el pop-up de edición de
+  /// una sección. Respeta el color primario y el tamaño del diseño.
+  Widget _editIconButton(BuildContext context, VoidCallback onTap,
+      {String tooltip = 'Editar'}) {
+    return Material(
+      color: Colors.transparent,
+      child: IconButton(
+        tooltip: tooltip,
+        visualDensity: VisualDensity.compact,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+        icon: Icon(Icons.edit_outlined,
+            size: 18, color: FlutterFlowTheme.of(context).primary),
+        onPressed: onTap,
+      ),
+    );
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // REQ-007: edición de secciones (pop-ups). Reutiliza el patrón visual de
+  // _agregarReferenciaDialog (colores, formas, botones Cancelar/Actualizar).
+  // ──────────────────────────────────────────────────────────────────────
+
+  /// Campo de texto reutilizable para los pop-ups de edición (REQ-007).
+  Widget _dialogField(BuildContext ctx, String label, TextEditingController c,
+      {bool saving = false,
+      bool requiredField = false,
+      TextInputType? keyboard}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: FlutterFlowTheme.of(ctx).bodySmall.override(
+                font: GoogleFonts.inter(fontWeight: FontWeight.w500),
+                fontSize: 13,
+                letterSpacing: 0,
+                fontWeight: FontWeight.w500,
+                color: _labelBlue,
+              ),
+        ),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: c,
+          keyboardType: keyboard,
+          enabled: !saving,
+          validator: requiredField
+              ? (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Campo obligatorio' : null
+              : null,
+          decoration: InputDecoration(
+            isDense: true,
+            filled: true,
+            fillColor: const Color(0xFFFBFAF9),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide(
+                  color: FlutterFlowTheme.of(ctx).alternate, width: 0.5),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderSide:
+                  BorderSide(color: FlutterFlowTheme.of(ctx).primary, width: 1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderSide:
+                  BorderSide(color: FlutterFlowTheme.of(ctx).error, width: 0.5),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderSide:
+                  BorderSide(color: FlutterFlowTheme.of(ctx).error, width: 1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          style: GoogleFonts.inter(fontSize: 15),
+        ),
+      ],
+    );
+  }
+
+  /// Pop-up de edición genérico: header (icono + título), campos y los botones
+  /// Cancelar / Actualizar. Ejecuta [onSave] y refresca la página al terminar.
+  Future<void> _showEditFormDialog(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required List<TextEditingController> controllers,
+    required List<Widget> Function(BuildContext ctx, bool saving) fields,
+    required Future<void> Function() onSave,
+    Future<void> Function()? onDelete,
+  }) async {
+    final formKey = GlobalKey<FormState>();
+    bool saving = false;
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setLocal) {
+            return Dialog(
+              insetPadding: const EdgeInsets.all(24),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Form(
+                      key: formKey,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(icon,
+                                  size: 20,
+                                  color: FlutterFlowTheme.of(ctx).primary),
+                              const SizedBox(width: 8),
+                              Text(
+                                title,
+                                style: FlutterFlowTheme.of(ctx)
+                                    .bodyMedium
+                                    .override(
+                                      font: GoogleFonts.inter(
+                                          fontWeight: FontWeight.w700),
+                                      fontSize: 18,
+                                      letterSpacing: 0,
+                                      fontWeight: FontWeight.w700,
+                                      color:
+                                          FlutterFlowTheme.of(ctx).primaryText,
+                                    ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          ...fields(ctx, saving),
+                          const SizedBox(height: 24),
+                          if (onDelete != null) ...[
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: TextButton.icon(
+                                onPressed: saving
+                                    ? null
+                                    : () async {
+                                        Navigator.of(ctx).pop();
+                                        await onDelete();
+                                      },
+                                icon: Icon(Icons.delete_outline,
+                                    size: 18,
+                                    color: FlutterFlowTheme.of(ctx).error),
+                                label: Text('Eliminar',
+                                    style: GoogleFonts.inter(
+                                        color: FlutterFlowTheme.of(ctx).error,
+                                        fontWeight: FontWeight.w600)),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                          ],
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: _valueGray,
+                                  side: const BorderSide(
+                                      color: Color(0xFF8A8A8A)),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8)),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 20, vertical: 12),
+                                ),
+                                onPressed:
+                                    saving ? null : () => Navigator.of(ctx).pop(),
+                                child: const Text('Cancelar'),
+                              ),
+                              const SizedBox(width: 12),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor:
+                                      FlutterFlowTheme.of(ctx).primary,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8)),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 24, vertical: 12),
+                                  textStyle: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600),
+                                ),
+                                onPressed: saving
+                                    ? null
+                                    : () async {
+                                        if (!formKey.currentState!.validate()) {
+                                          return;
+                                        }
+                                        setLocal(() => saving = true);
+                                        try {
+                                          await onSave();
+                                          if (ctx.mounted) {
+                                            Navigator.of(ctx).pop();
+                                          }
+                                          if (mounted) {
+                                            safeSetState(() {});
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(const SnackBar(
+                                              content: Text(
+                                                  'Actualizado correctamente'),
+                                            ));
+                                          }
+                                        } catch (_) {
+                                          setLocal(() => saving = false);
+                                          if (ctx.mounted) {
+                                            ScaffoldMessenger.of(ctx)
+                                                .showSnackBar(const SnackBar(
+                                              content: Text(
+                                                  'No se pudo actualizar'),
+                                            ));
+                                          }
+                                        }
+                                      },
+                                child: saving
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white),
+                                      )
+                                    : const Text('Actualizar'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    ).whenComplete(() {
+      for (final c in controllers) {
+        c.dispose();
+      }
+    });
+  }
+
+  /// REQ-007: pop-up para editar "Datos básicos" (usuarios).
+  void _editDatosBasicosDialog(BuildContext context, UsuariosRow? usuario) {
+    final tipoCtrl = TextEditingController(text: usuario?.tipoDocumento ?? '');
+    final numCtrl = TextEditingController(text: usuario?.numeroDocumento ?? '');
+    final dirCtrl = TextEditingController(text: usuario?.direccion ?? '');
+    final paisCtrl = TextEditingController(text: usuario?.pais ?? '');
+    _showEditFormDialog(
+      context,
+      icon: Icons.person_outline,
+      title: 'Editar datos básicos',
+      controllers: [tipoCtrl, numCtrl, dirCtrl, paisCtrl],
+      fields: (ctx, saving) => [
+        _dialogField(ctx, 'Tipo de documento', tipoCtrl, saving: saving),
+        const SizedBox(height: 14),
+        _dialogField(ctx, 'Número de documento', numCtrl, saving: saving),
+        const SizedBox(height: 14),
+        _dialogField(ctx, 'Dirección', dirCtrl, saving: saving),
+        const SizedBox(height: 14),
+        _dialogField(ctx, 'País', paisCtrl, saving: saving),
+      ],
+      onSave: () async {
+        await UsuariosTable().update(
+          data: {
+            'tipo_documento': tipoCtrl.text.trim(),
+            'numero_documento': numCtrl.text.trim(),
+            'direccion': dirCtrl.text.trim(),
+            'pais': paisCtrl.text.trim(),
+          },
+          matchingRows: (rows) => rows.eqOrNull('id', widget.proveedorId),
+        );
+      },
+    );
+  }
+
+  /// REQ-007: pop-up para editar "Facturación" (cuentas_bancarias + RUT).
+  void _editFacturacionDialog(BuildContext context, UsuariosRow? usuario) async {
+    final rows = await CuentasBancariasTable().querySingleRow(
+      queryFn: (q) => q.eqOrNull('usuario_id', widget.proveedorId),
+    );
+    final cuenta = rows.isNotEmpty ? rows.first : null;
+    final entidadCtrl =
+        TextEditingController(text: cuenta?.entidadBancaria ?? '');
+    final tipoCtrl = TextEditingController(text: cuenta?.tipoCuenta ?? '');
+    final numCtrl = TextEditingController(text: cuenta?.numeroCuenta ?? '');
+    final rutCtrl =
+        TextEditingController(text: usuario?.registroTributario ?? '');
+    if (!mounted) return;
+    _showEditFormDialog(
+      context,
+      icon: Icons.account_balance_wallet_outlined,
+      title: 'Editar facturación',
+      controllers: [entidadCtrl, tipoCtrl, numCtrl, rutCtrl],
+      fields: (ctx, saving) => [
+        _dialogField(ctx, 'Entidad bancaria', entidadCtrl, saving: saving),
+        const SizedBox(height: 14),
+        _dialogField(ctx, 'Tipo de cuenta', tipoCtrl, saving: saving),
+        const SizedBox(height: 14),
+        _dialogField(ctx, 'Número de cuenta', numCtrl,
+            saving: saving, keyboard: TextInputType.number),
+        const SizedBox(height: 14),
+        _dialogField(ctx, 'RUT', rutCtrl, saving: saving),
+      ],
+      onSave: () async {
+        if (cuenta != null) {
+          await CuentasBancariasTable().update(
+            data: {
+              'entidad_bancaria': entidadCtrl.text.trim(),
+              'tipo_cuenta': tipoCtrl.text.trim(),
+              'numero_cuenta': numCtrl.text.trim(),
+            },
+            matchingRows: (r) => r.eqOrNull('id', cuenta.id),
+          );
+        } else {
+          final hasAny = entidadCtrl.text.trim().isNotEmpty ||
+              tipoCtrl.text.trim().isNotEmpty ||
+              numCtrl.text.trim().isNotEmpty;
+          if (hasAny) {
+            final titular =
+                '${usuario?.nombres ?? ''} ${usuario?.apellidos ?? ''}'.trim();
+            await CuentasBancariasTable().insert({
+              'usuario_id': widget.proveedorId,
+              'entidad_bancaria': entidadCtrl.text.trim(),
+              'tipo_cuenta': tipoCtrl.text.trim(),
+              'numero_cuenta': numCtrl.text.trim(),
+              'nombre_titular': titular.isEmpty ? '—' : titular,
+            });
+          }
+        }
+        await UsuariosTable().update(
+          data: {'registro_tributario': rutCtrl.text.trim()},
+          matchingRows: (r) => r.eqOrNull('id', widget.proveedorId),
+        );
+      },
+    );
+  }
+
+  /// REQ-007: pop-up para editar una referencia (montado) con opción Eliminar.
+  void _editReferenciaDialog(BuildContext context, ReferenciasLaboralesRow r) {
+    final nombreCtrl = TextEditingController(text: r.nombreReferencia);
+    final telCtrl = TextEditingController(text: r.telefonoReferencia);
+    final relCtrl = TextEditingController(text: r.relacionLaboral);
+    _showEditFormDialog(
+      context,
+      icon: Icons.people_alt_outlined,
+      title: 'Editar referencia',
+      controllers: [nombreCtrl, telCtrl, relCtrl],
+      fields: (ctx, saving) => [
+        _dialogField(ctx, 'Nombre *', nombreCtrl,
+            saving: saving, requiredField: true),
+        const SizedBox(height: 14),
+        _dialogField(ctx, 'Teléfono *', telCtrl,
+            saving: saving, requiredField: true, keyboard: TextInputType.phone),
+        const SizedBox(height: 14),
+        _dialogField(ctx, 'Relación *', relCtrl,
+            saving: saving, requiredField: true),
+      ],
+      onSave: () async {
+        await ReferenciasLaboralesTable().update(
+          data: {
+            'nombre_referencia': nombreCtrl.text.trim(),
+            'telefono_referencia': telCtrl.text.trim(),
+            'relacion_laboral': relCtrl.text.trim(),
+          },
+          matchingRows: (rows) => rows.eqOrNull('id', r.id),
+        );
+      },
+      onDelete: () => _confirmDeleteReferencia(context, r),
+    );
+  }
+
+  /// REQ-007: confirmación previa antes de eliminar una referencia.
+  Future<void> _confirmDeleteReferencia(
+      BuildContext context, ReferenciasLaboralesRow r) async {
+    await showDialog(
+      context: context,
+      builder: (dctx) {
+        return Dialog(
+          elevation: 0,
+          insetPadding: EdgeInsets.zero,
+          backgroundColor: Colors.transparent,
+          alignment: AlignmentDirectional(0.0, 0.0)
+              .resolve(Directionality.of(context)),
+          child: NotificacioneliminarWidget(
+            titulo: 'Eliminar referencia',
+            texto: '¿Seguro de eliminar esta referencia?',
+            succes: false,
+            action: () async {
+              await ReferenciasLaboralesTable().delete(
+                matchingRows: (rows) => rows.eqOrNull('id', r.id),
+              );
+              if (mounted) safeSetState(() {});
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  /// REQ-007: pop-up para editar "Datos del cliente" (encabezado) + foto.
+  void _editDatosClienteDialog(BuildContext context, UsuariosRow? usuario) {
+    final nombresCtrl = TextEditingController(text: usuario?.nombres ?? '');
+    final apellidosCtrl = TextEditingController(text: usuario?.apellidos ?? '');
+    final telCtrl = TextEditingController(text: usuario?.telefono ?? '');
+    final ciudadCtrl = TextEditingController(text: usuario?.ciudad ?? '');
+    final igCtrl = TextEditingController(
+        text: (usuario?.redesSociales.isNotEmpty ?? false)
+            ? usuario!.redesSociales.first
+            : '');
+    final fbCtrl = TextEditingController(
+        text: (usuario?.redesSociales.length ?? 0) > 1
+            ? usuario!.redesSociales.elementAt(1)
+            : '');
+    final formKey = GlobalKey<FormState>();
+    String? nuevaFotoUrl;
+    bool saving = false;
+    bool subiendoFoto = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return StatefulBuilder(builder: (ctx, setLocal) {
+          final fotoActual = nuevaFotoUrl ??
+              ((usuario?.fotoPerfilUrl?.isNotEmpty ?? false)
+                  ? usuario!.fotoPerfilUrl
+                  : null);
+          return Dialog(
+            insetPadding: const EdgeInsets.all(24),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.person_outline,
+                                size: 20,
+                                color: FlutterFlowTheme.of(ctx).primary),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Editar datos del cliente',
+                              style: FlutterFlowTheme.of(ctx).bodyMedium.override(
+                                    font: GoogleFonts.inter(
+                                        fontWeight: FontWeight.w700),
+                                    fontSize: 18,
+                                    letterSpacing: 0,
+                                    fontWeight: FontWeight.w700,
+                                    color: FlutterFlowTheme.of(ctx).primaryText,
+                                  ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 88,
+                                height: 88,
+                                clipBehavior: Clip.antiAlias,
+                                decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Color(0xFFEAEAEA)),
+                                child: fotoActual != null
+                                    ? Image.network(fotoActual,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) =>
+                                            const Icon(Icons.person, size: 44))
+                                    : const Icon(Icons.person, size: 44),
+                              ),
+                              const SizedBox(height: 8),
+                              TextButton.icon(
+                                onPressed: (saving || subiendoFoto)
+                                    ? null
+                                    : () async {
+                                        final files = await selectFiles(
+                                          storageFolderPath: 'perfiles',
+                                          multiFile: false,
+                                        );
+                                        if (files == null || files.isEmpty) {
+                                          return;
+                                        }
+                                        setLocal(() => subiendoFoto = true);
+                                        try {
+                                          final urls =
+                                              await uploadSupabaseStorageFiles(
+                                            bucketName: 'archivos',
+                                            selectedFiles: files,
+                                          );
+                                          if (urls.isNotEmpty) {
+                                            setLocal(
+                                                () => nuevaFotoUrl = urls.first);
+                                          }
+                                        } catch (_) {
+                                          if (ctx.mounted) {
+                                            ScaffoldMessenger.of(ctx)
+                                                .showSnackBar(const SnackBar(
+                                              content: Text(
+                                                  'No se pudo subir la foto'),
+                                            ));
+                                          }
+                                        } finally {
+                                          setLocal(() => subiendoFoto = false);
+                                        }
+                                      },
+                                icon: subiendoFoto
+                                    ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2))
+                                    : Icon(Icons.photo_camera_outlined,
+                                        size: 18,
+                                        color: FlutterFlowTheme.of(ctx).primary),
+                                label: Text(
+                                    subiendoFoto ? 'Subiendo...' : 'Cambiar foto',
+                                    style: GoogleFonts.inter(
+                                        color: FlutterFlowTheme.of(ctx).primary,
+                                        fontWeight: FontWeight.w600)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _dialogField(ctx, 'Nombres *', nombresCtrl,
+                            saving: saving, requiredField: true),
+                        const SizedBox(height: 14),
+                        _dialogField(ctx, 'Apellidos *', apellidosCtrl,
+                            saving: saving, requiredField: true),
+                        const SizedBox(height: 14),
+                        _dialogField(ctx, 'Teléfono', telCtrl,
+                            saving: saving, keyboard: TextInputType.phone),
+                        const SizedBox(height: 14),
+                        _dialogField(ctx, 'Ciudad', ciudadCtrl, saving: saving),
+                        const SizedBox(height: 14),
+                        _dialogField(ctx, 'Instagram', igCtrl, saving: saving),
+                        const SizedBox(height: 14),
+                        _dialogField(ctx, 'Facebook', fbCtrl, saving: saving),
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: _valueGray,
+                                side:
+                                    const BorderSide(color: Color(0xFF8A8A8A)),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20, vertical: 12),
+                              ),
+                              onPressed:
+                                  saving ? null : () => Navigator.of(ctx).pop(),
+                              child: const Text('Cancelar'),
+                            ),
+                            const SizedBox(width: 12),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    FlutterFlowTheme.of(ctx).primary,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 24, vertical: 12),
+                                textStyle: GoogleFonts.inter(
+                                    fontSize: 14, fontWeight: FontWeight.w600),
+                              ),
+                              onPressed: (saving || subiendoFoto)
+                                  ? null
+                                  : () async {
+                                      if (!formKey.currentState!.validate()) {
+                                        return;
+                                      }
+                                      setLocal(() => saving = true);
+                                      try {
+                                        final data = <String, dynamic>{
+                                          'nombres': nombresCtrl.text.trim(),
+                                          'apellidos': apellidosCtrl.text.trim(),
+                                          'telefono': telCtrl.text.trim(),
+                                          'ciudad': ciudadCtrl.text.trim(),
+                                          'redes_sociales': [
+                                            igCtrl.text.trim(),
+                                            fbCtrl.text.trim(),
+                                          ],
+                                        };
+                                        if (nuevaFotoUrl != null) {
+                                          data['foto_perfil_url'] = nuevaFotoUrl;
+                                        }
+                                        await UsuariosTable().update(
+                                          data: data,
+                                          matchingRows: (rows) => rows.eqOrNull(
+                                              'id', widget.proveedorId),
+                                        );
+                                        final fotoVieja = usuario?.fotoPerfilUrl;
+                                        if (nuevaFotoUrl != null &&
+                                            fotoVieja != null &&
+                                            fotoVieja.isNotEmpty &&
+                                            fotoVieja != nuevaFotoUrl) {
+                                          try {
+                                            await deleteSupabaseFileFromPublicUrl(
+                                                fotoVieja);
+                                          } catch (_) {}
+                                        }
+                                        if (ctx.mounted) {
+                                          Navigator.of(ctx).pop();
+                                        }
+                                        if (mounted) {
+                                          safeSetState(() {});
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(const SnackBar(
+                                            content: Text(
+                                                'Actualizado correctamente'),
+                                          ));
+                                        }
+                                      } catch (_) {
+                                        setLocal(() => saving = false);
+                                        if (ctx.mounted) {
+                                          ScaffoldMessenger.of(ctx)
+                                              .showSnackBar(const SnackBar(
+                                            content:
+                                                Text('No se pudo actualizar'),
+                                          ));
+                                        }
+                                      }
+                                    },
+                              child: saving
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2, color: Colors.white),
+                                    )
+                                  : const Text('Actualizar'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        });
+      },
+    ).whenComplete(() {
+      nombresCtrl.dispose();
+      apellidosCtrl.dispose();
+      telCtrl.dispose();
+      ciudadCtrl.dispose();
+      igCtrl.dispose();
+      fbCtrl.dispose();
+    });
+  }
+
+  /// REQ-007: pop-up para editar "Servicios ofrecidos" por categoría.
+  /// Seleccionar una categoría = todos sus servicios activos (delete + insert).
+  void _editServiciosDialog(BuildContext context) async {
+    final results = await Future.wait<List<SupabaseDataRow>>([
+      ProfesionalServiciosTable().queryRows(
+          queryFn: (q) => q.eqOrNull('usuario_id', widget.proveedorId)),
+      ServiciosTable().queryRows(queryFn: (q) => q),
+      SubcategoriasTable().queryRows(queryFn: (q) => q),
+      CategoriasTable().queryRows(queryFn: (q) => q),
+    ]);
+    final prof = results[0].cast<ProfesionalServiciosRow>();
+    final servicios = results[1].cast<ServiciosRow>();
+    final subcats = results[2].cast<SubcategoriasRow>();
+    final cats = results[3].cast<CategoriasRow>();
+
+    final subToCat = <String, String>{
+      for (final sc in subcats) sc.id: sc.categoriaId
+    };
+    final servToCat = <String, String>{};
+    for (final s in servicios) {
+      final c = subToCat[s.subcategoriaId];
+      if (c != null) servToCat[s.id] = c;
+    }
+    final catsActivas = <CategoriasRow>[];
+    final vistos = <String>{};
+    for (final c in cats) {
+      if (c.estado.trim().toLowerCase() != 'activo') continue;
+      if (c.nombre.isEmpty || !vistos.add(c.id)) continue;
+      catsActivas.add(c);
+    }
+    final selected = <String>{};
+    for (final servId in prof.map((e) => e.servicioId)) {
+      final c = servToCat[servId];
+      if (c != null) selected.add(c);
+    }
+    if (!mounted) return;
+
+    final formSelected = <String>{...selected};
+    bool saving = false;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return StatefulBuilder(builder: (ctx, setLocal) {
+          return Dialog(
+            insetPadding: const EdgeInsets.all(24),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 640, maxHeight: 600),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.handyman,
+                            size: 20, color: FlutterFlowTheme.of(ctx).primary),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Editar servicios',
+                          style: FlutterFlowTheme.of(ctx).bodyMedium.override(
+                                font:
+                                    GoogleFonts.inter(fontWeight: FontWeight.w700),
+                                fontSize: 18,
+                                letterSpacing: 0,
+                                fontWeight: FontWeight.w700,
+                                color: FlutterFlowTheme.of(ctx).primaryText,
+                              ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Toca una categoría para seleccionarla o quitarla.',
+                      style: FlutterFlowTheme.of(ctx).bodySmall.override(
+                            font: GoogleFonts.inter(),
+                            fontSize: 13,
+                            letterSpacing: 0,
+                            color: FlutterFlowTheme.of(ctx).secondaryText,
+                          ),
+                    ),
+                    const SizedBox(height: 16),
+                    if (catsActivas.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Text('No hay categorías activas',
+                            style: GoogleFonts.inter(
+                                color: FlutterFlowTheme.of(ctx).secondaryText)),
+                      )
+                    else
+                      Flexible(
+                        child: SingleChildScrollView(
+                          child: Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: catsActivas.map((c) {
+                              final sel = formSelected.contains(c.id);
+                              return InkWell(
+                                borderRadius: BorderRadius.circular(20),
+                                onTap: saving
+                                    ? null
+                                    : () => setLocal(() {
+                                          if (sel) {
+                                            formSelected.remove(c.id);
+                                          } else {
+                                            formSelected.add(c.id);
+                                          }
+                                        }),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        sel ? _chipBg : const Color(0xFFF0F0EF),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                          sel
+                                              ? Icons.check_circle_outline
+                                              : Icons.add,
+                                          size: 16,
+                                          color: sel
+                                              ? _chipText
+                                              : const Color(0xFF8A8A8A)),
+                                      const SizedBox(width: 6),
+                                      Text(c.nombre,
+                                          style: GoogleFonts.inter(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w500,
+                                              color: sel
+                                                  ? _chipText
+                                                  : const Color(0xFF8A8A8A))),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: _valueGray,
+                            side: const BorderSide(color: Color(0xFF8A8A8A)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 12),
+                          ),
+                          onPressed:
+                              saving ? null : () => Navigator.of(ctx).pop(),
+                          child: const Text('Cancelar'),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: FlutterFlowTheme.of(ctx).primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 24, vertical: 12),
+                            textStyle: GoogleFonts.inter(
+                                fontSize: 14, fontWeight: FontWeight.w600),
+                          ),
+                          onPressed: saving
+                              ? null
+                              : () async {
+                                  setLocal(() => saving = true);
+                                  try {
+                                    final targetIds = <String>[];
+                                    for (final s in servicios) {
+                                      if (s.estado.trim().toLowerCase() !=
+                                          'activo') continue;
+                                      final c = servToCat[s.id];
+                                      if (c != null &&
+                                          formSelected.contains(c)) {
+                                        targetIds.add(s.id);
+                                      }
+                                    }
+                                    await ProfesionalServiciosTable().delete(
+                                      matchingRows: (rows) => rows.eqOrNull(
+                                          'usuario_id', widget.proveedorId),
+                                    );
+                                    for (final sid in targetIds) {
+                                      await ProfesionalServiciosTable().insert({
+                                        'usuario_id': widget.proveedorId,
+                                        'servicio_id': sid,
+                                      });
+                                    }
+                                    if (ctx.mounted) {
+                                      Navigator.of(ctx).pop();
+                                    }
+                                    if (mounted) {
+                                      safeSetState(() {});
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(const SnackBar(
+                                        content:
+                                            Text('Servicios actualizados'),
+                                      ));
+                                    }
+                                  } catch (_) {
+                                    setLocal(() => saving = false);
+                                    if (ctx.mounted) {
+                                      ScaffoldMessenger.of(ctx)
+                                          .showSnackBar(const SnackBar(
+                                        content: Text('No se pudo actualizar'),
+                                      ));
+                                    }
+                                  }
+                                },
+                          child: saving
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Text('Actualizar'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        });
+      },
+    );
+  }
+
+  /// REQ-007: confirmación genérica de borrado (reutiliza NotificacioneliminarWidget).
+  Future<void> _confirmEliminar(BuildContext context, String titulo,
+      String texto, Future<void> Function() action) async {
+    await showDialog(
+      context: context,
+      builder: (dctx) {
+        return Dialog(
+          elevation: 0,
+          insetPadding: EdgeInsets.zero,
+          backgroundColor: Colors.transparent,
+          alignment: AlignmentDirectional(0.0, 0.0)
+              .resolve(Directionality.of(context)),
+          child: NotificacioneliminarWidget(
+            titulo: titulo,
+            texto: texto,
+            succes: false,
+            action: () async {
+              await action();
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  /// REQ-007: pop-up para gestionar documentos (subir/reemplazar/eliminar
+  /// registro y certificaciones). Borra también el archivo de Storage.
+  void _gestionarDocumentosDialog(
+      BuildContext context, UsuariosRow? usuario) async {
+    final certsInit = await CertificacionesTable().queryRows(
+      queryFn: (q) => q.eqOrNull('usuario_id', widget.proveedorId),
+    );
+    if (!mounted) return;
+    String? cedulaUrl = usuario?.cedula;
+    String? cuentaUrl = usuario?.cuentaBancaria;
+    String? contratoUrl = usuario?.contrato;
+    final certs = [...certsInit];
+    final entidadCtrl = TextEditingController();
+    bool cambios = false;
+    bool busy = false;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return StatefulBuilder(builder: (ctx, setLocal) {
+          Future<String?> pickAndUpload(String folder) async {
+            final files = await selectFiles(
+                storageFolderPath: folder, multiFile: false);
+            if (files == null || files.isEmpty) return null;
+            final urls = await uploadSupabaseStorageFiles(
+                bucketName: 'archivos', selectedFiles: files);
+            return urls.isNotEmpty ? urls.first : null;
+          }
+
+          Future<void> subirRegistro(String campo, String folder, String? actual,
+              void Function(String?) set) async {
+            setLocal(() => busy = true);
+            try {
+              final url = await pickAndUpload(folder);
+              if (url != null) {
+                await UsuariosTable().update(
+                  data: {campo: url},
+                  matchingRows: (r) => r.eqOrNull('id', widget.proveedorId),
+                );
+                if (actual != null && actual.isNotEmpty && actual != url) {
+                  try {
+                    await deleteSupabaseFileFromPublicUrl(actual);
+                  } catch (_) {}
+                }
+                cambios = true;
+                setLocal(() => set(url));
+              }
+            } catch (_) {
+              if (ctx.mounted) {
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                    const SnackBar(content: Text('No se pudo subir el archivo')));
+              }
+            } finally {
+              setLocal(() => busy = false);
+            }
+          }
+
+          Future<void> eliminarRegistro(
+              String campo, String? actual, void Function(String?) set) async {
+            await _confirmEliminar(context, 'Eliminar documento',
+                '¿Seguro de eliminar este documento?', () async {
+              await UsuariosTable().update(
+                data: {campo: null},
+                matchingRows: (r) => r.eqOrNull('id', widget.proveedorId),
+              );
+              if (actual != null && actual.isNotEmpty) {
+                try {
+                  await deleteSupabaseFileFromPublicUrl(actual);
+                } catch (_) {}
+              }
+              cambios = true;
+              setLocal(() => set(null));
+            });
+          }
+
+          Future<void> agregarCert() async {
+            if (entidadCtrl.text.trim().isEmpty) {
+              ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+                  content: Text('Ingresa el nombre de la entidad')));
+              return;
+            }
+            setLocal(() => busy = true);
+            try {
+              final url = await pickAndUpload('certificaciones');
+              if (url != null) {
+                await CertificacionesTable().insert({
+                  'usuario_id': widget.proveedorId,
+                  'entidad_certificadora': entidadCtrl.text.trim(),
+                  'documento_url': url,
+                });
+                final fresh = await CertificacionesTable().queryRows(
+                  queryFn: (q) => q.eqOrNull('usuario_id', widget.proveedorId),
+                );
+                certs
+                  ..clear()
+                  ..addAll(fresh);
+                entidadCtrl.clear();
+                cambios = true;
+                setLocal(() {});
+              }
+            } catch (_) {
+              if (ctx.mounted) {
+                ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+                    content: Text('No se pudo agregar la certificación')));
+              }
+            } finally {
+              setLocal(() => busy = false);
+            }
+          }
+
+          Future<void> eliminarCert(CertificacionesRow c) async {
+            await _confirmEliminar(context, 'Eliminar certificación',
+                '¿Seguro de eliminar esta certificación?', () async {
+              await CertificacionesTable().delete(
+                matchingRows: (r) => r.eqOrNull('id', c.id),
+              );
+              try {
+                await deleteSupabaseFileFromPublicUrl(c.documentoUrl);
+              } catch (_) {}
+              certs.remove(c);
+              cambios = true;
+              setLocal(() {});
+            });
+          }
+
+          Widget regRow(String label, String? url, String campo, String folder,
+              void Function(String?) set) {
+            final cargado = url != null && url.isNotEmpty;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '$label · ${cargado ? 'cargado' : 'no cargado'}',
+                      style: GoogleFonts.inter(fontSize: 14),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: busy
+                        ? null
+                        : () => subirRegistro(campo, folder, url, set),
+                    child: Text(cargado ? 'Reemplazar' : 'Subir'),
+                  ),
+                  if (cargado)
+                    IconButton(
+                      tooltip: 'Eliminar',
+                      onPressed:
+                          busy ? null : () => eliminarRegistro(campo, url, set),
+                      icon: Icon(Icons.delete_outline,
+                          size: 20, color: FlutterFlowTheme.of(ctx).error),
+                    ),
+                ],
+              ),
+            );
+          }
+
+          return Dialog(
+            insetPadding: const EdgeInsets.all(24),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560, maxHeight: 620),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.description_outlined,
+                            size: 20, color: FlutterFlowTheme.of(ctx).primary),
+                        const SizedBox(width: 8),
+                        Text('Gestionar documentos',
+                            style: FlutterFlowTheme.of(ctx).bodyMedium.override(
+                                  font: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w700),
+                                  fontSize: 18,
+                                  letterSpacing: 0,
+                                  fontWeight: FontWeight.w700,
+                                  color: FlutterFlowTheme.of(ctx).primaryText,
+                                )),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Flexible(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Documentos de registro',
+                                style: GoogleFonts.inter(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: FlutterFlowTheme.of(ctx).primary)),
+                            const SizedBox(height: 10),
+                            regRow('Cédula', cedulaUrl, 'cedula', 'cedulas',
+                                (v) => cedulaUrl = v),
+                            regRow('Cuenta bancaria', cuentaUrl,
+                                'cuenta_bancaria', 'cuentas',
+                                (v) => cuentaUrl = v),
+                            regRow('Contrato', contratoUrl, 'contrato',
+                                'contratos', (v) => contratoUrl = v),
+                            const Divider(height: 28),
+                            Text('Certificaciones',
+                                style: GoogleFonts.inter(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: FlutterFlowTheme.of(ctx).primary)),
+                            const SizedBox(height: 10),
+                            if (certs.isEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: Text('Sin certificaciones',
+                                    style: GoogleFonts.inter(
+                                        fontSize: 13,
+                                        color: FlutterFlowTheme.of(ctx)
+                                            .secondaryText)),
+                              )
+                            else
+                              ...certs.map((c) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 6),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(c.entidadCertificadora,
+                                              style: GoogleFonts.inter(
+                                                  fontSize: 14)),
+                                        ),
+                                        IconButton(
+                                          tooltip: 'Eliminar',
+                                          onPressed: busy
+                                              ? null
+                                              : () => eliminarCert(c),
+                                          icon: Icon(Icons.delete_outline,
+                                              size: 20,
+                                              color: FlutterFlowTheme.of(ctx)
+                                                  .error),
+                                        ),
+                                      ],
+                                    ),
+                                  )),
+                            const SizedBox(height: 8),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Expanded(
+                                  child: _dialogField(
+                                      ctx, 'Entidad certificadora', entidadCtrl,
+                                      saving: busy),
+                                ),
+                                const SizedBox(width: 8),
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 2),
+                                  child: OutlinedButton.icon(
+                                    onPressed: busy ? null : agregarCert,
+                                    icon: const Icon(Icons.upload_file_outlined,
+                                        size: 18),
+                                    label: const Text('Agregar'),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: FlutterFlowTheme.of(ctx).primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12),
+                        ),
+                        onPressed: busy ? null : () => Navigator.of(ctx).pop(),
+                        child: const Text('Cerrar'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        });
+      },
+    ).whenComplete(() {
+      entidadCtrl.dispose();
+      if (cambios && mounted) safeSetState(() {});
+    });
   }
 
   /// Devuelve el valor solo si es un dato real del backend; null si está
@@ -601,7 +1859,10 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
       width: double.infinity,
       decoration: _cardDecoration,
       padding: const EdgeInsets.all(24),
-      child: LayoutBuilder(
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          LayoutBuilder(
         builder: (context, constraints) {
           final narrow = constraints.maxWidth < 900;
           final left = Row(
@@ -788,6 +2049,14 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
             ],
           );
         },
+          ),
+          Positioned(
+            top: -8,
+            right: -8,
+            child: _editIconButton(
+                context, () => _editDatosClienteDialog(context, usuario)),
+          ),
+        ],
       ),
     );
   }
@@ -918,6 +2187,9 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
                   ),
                 ),
               ),
+              const SizedBox(width: 12),
+              _editIconButton(
+                  context, () => _gestionarDocumentosDialog(context, usuario)),
             ],
           ),
           // Documentos de registro
@@ -1448,6 +2720,9 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              _refActionButton(context, Icons.edit_outlined, 'Editar',
+                  () => _editReferenciaDialog(context, r)),
+              const SizedBox(height: 6),
               _refActionButton(context, Icons.remove_red_eye_outlined, 'Ver',
                   () => _verReferencia(context, r)),
               const SizedBox(height: 6),
@@ -1569,7 +2844,8 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionTitle(context, Icons.person_outline, 'Datos básicos'),
+          _sectionTitle(context, Icons.person_outline, 'Datos básicos',
+              onEdit: () => _editDatosBasicosDialog(context, usuario)),
           _infoText(context, 'Tipo de documento', usuario?.tipoDocumento),
           const SizedBox(height: 14),
           _infoText(context, 'Número de documento', usuario?.numeroDocumento),
@@ -1602,7 +2878,8 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _sectionTitle(
-                  context, Icons.account_balance_wallet_outlined, 'Facturación'),
+                  context, Icons.account_balance_wallet_outlined, 'Facturación',
+                  onEdit: () => _editFacturacionDialog(context, usuario)),
               if (!snapshot.hasData)
                 Center(
                   child: SizedBox(
@@ -1650,7 +2927,8 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionTitle(context, Icons.handyman, 'Servicios ofrecidos'),
+          _sectionTitle(context, Icons.handyman, 'Servicios ofrecidos',
+              onEdit: () => _editServiciosDialog(context)),
           FutureBuilder<List<ProfesionalServiciosRow>>(
             future: ProfesionalServiciosTable().queryRows(
               queryFn: (q) => q.eqOrNull('usuario_id', widget.proveedorId),
