@@ -1,8 +1,12 @@
 # Especificación Técnica — REQ-006
-**Título:** Columna "Ciudad" en el listado de Solicitudes
+**Título:** Listado de Solicitudes — columna «Ciudad» y opción «Pendientes» en el filtro de Estado
 **Fecha:** 2026-06-18
 **Estado:** Especificado (pendiente de implementación)
 **Metodología:** Spec Driven Development (SDD)
+
+> **Alcance:** este REQ agrupa dos cambios en la sección **Solicitudes** (`lib/web/solicitudes/`):
+> - **Parte A (§1–§11):** nueva columna "Ciudad" en el listado (antes de "Direccion").
+> - **Parte B (§12):** mostrar el estado `entrantes` en el filtro de Estado con la etiqueta "Pendientes".
 
 ---
 
@@ -11,6 +15,7 @@
 | Versión | Fecha | Autor | Cambios |
 |---|---|---|---|
 | v1.0.0 | 2026-06-18 | Equipo Hulp | Versión inicial. Agregar la columna "Ciudad" al listado de Solicitudes, ubicada **antes** de "Direccion". El valor proviene de la relación `solicitudes_servicio.ciudad_id → ciudades.nombre`, expuesta a través de la vista `vw_solicitudes_servicios_completa`. |
+| **v1.1.0** | **2026-06-18** | **Equipo Hulp** | **Agregar la opción "Pendientes" al filtro de Estado del listado de Solicitudes. Surface el estado cuyo valor de BD es `entrantes` (hoy oculto a propósito vía la lista `ocultosEnFiltro`) y muestra su etiqueta como "Pendientes" en el desplegable. El valor en BD y el de filtrado siguen siendo `entrantes`; el badge de estado de las filas no cambia. Ver §12.** |
 
 ---
 
@@ -213,3 +218,83 @@ DataCell(Text(
 2. **Dart (modelo de la vista):** agregar getter/setter `solicitudCiudad` ↔ `'solicitud_ciudad'` en `vw_solicitudes_servicios_completa.dart`.
 3. **Dart (UI):** en `solicitudes_data_table.dart`, insertar `_col('Ciudad', headerStyle)` y la `DataCell` de `item.solicitudCiudad` **antes** de "Direccion", en ambos métodos (`_buildColumns` y `_buildRow`).
 4. Verificar compilación y CA-01..CA-09.
+
+---
+
+# Parte B — Opción «Pendientes» en el filtro de Estado (v1.1.0)
+
+## 12.1 Resumen del cambio
+
+En el listado de Solicitudes, el filtro **"Filtrar por: Estado"** (un `DropdownButton` en `SolicitudesFilterBar`) no ofrece actualmente la opción para el estado cuyo valor de BD es `entrantes`. Este requerimiento la **agrega**, mostrándola con la etiqueta **"Pendientes"**.
+
+- **Etiqueta visible en el filtro:** "Pendientes".
+- **Valor en base de datos y valor de filtrado:** `entrantes` (sin cambios; la app sigue filtrando por `estado_solicitud == 'entrantes'`).
+- **Badge de estado en las filas:** **sin cambios** (sigue mostrando "Pendiente" vía `solicitudStatusLabel`). El usuario confirmó que "en el badge ya existe".
+
+## 12.2 Causa raíz (estado actual del código)
+
+Dos puntos explican por qué hoy no aparece y dónde se ajusta:
+
+1. **Exclusión deliberada** — `lib/web/solicitudes/solicitudes_widget.dart`, método `_getEstadoOptions`:
+   ```dart
+   // Estados ... por decisión de producto NO se ofrecen como opción de filtro
+   const ocultosEnFiltro = ['entrantes', 'pendiente'];
+   ```
+   El estado `entrantes` se filtra fuera de las opciones del dropdown. Las opciones se derivan de los estados **presentes en los datos** (`allData`), excluyendo los de `ocultosEnFiltro`.
+
+2. **Etiqueta del filtro** — `lib/flutter_flow/custom_functions.dart`, función `getStatus`:
+   ```dart
+   case 'entrantes': return 'Pendiente';   // singular
+   ```
+   `getStatus` se usa **únicamente** en `solicitudes_filter_bar.dart` (verificado); por eso cambiar este mapeo afecta **solo al filtro** y no al badge.
+
+## 12.3 Análisis de impacto
+
+| Archivo / objeto | Acción | Justificación |
+|---|---|---|
+| `lib/web/solicitudes/solicitudes_widget.dart` (`_getEstadoOptions`) | **Modificar** | Quitar `'entrantes'` de `ocultosEnFiltro` para que el estado aparezca como opción del filtro cuando exista en los datos. |
+| `lib/flutter_flow/custom_functions.dart` (`getStatus`) | **Modificar** | Cambiar el `case 'entrantes'` para devolver `'Pendientes'` (etiqueta del desplegable). |
+| `lib/flutter_flow/solicitud_status_helpers.dart` (`solicitudStatusLabel`) | **Sin cambios** | Es el mapeo del **badge** de las filas; debe seguir mostrando "Pendiente". |
+| `lib/web/solicitudes/solicitudes_filter_bar.dart` | **Sin cambios** | Ya renderiza `value = e` (valor crudo `entrantes`) y `label = getStatus(e)`. El filtrado por `entrantes` ya funciona. |
+
+> **Nota sobre `'pendiente'`:** la lista `ocultosEnFiltro` también contiene el valor crudo `'pendiente'` (variante heredada). Este requerimiento **solo** desoculta `'entrantes'`; `'pendiente'` se mantiene oculto para no duplicar la opción. Si se requiere también surfacearlo, será un ajuste aparte.
+
+## 12.4 Comportamiento por caso
+
+| # | Caso | Entrada | Salida esperada |
+|---|---|---|---|
+| CB-01 | Existen solicitudes en estado `entrantes` | `allData` contiene filas con `estado_solicitud == 'entrantes'` | El dropdown de Estado incluye la opción **"Pendientes"**. |
+| CB-02 | El usuario selecciona "Pendientes" | click en la opción | `dropDownValue1 = 'entrantes'`; el listado se filtra a las solicitudes con `estado_solicitud == 'entrantes'`. |
+| CB-03 | Badge en las filas | una fila con estado `entrantes` | La pastilla de Estado sigue mostrando **"Pendiente"** (sin cambios). |
+| CB-04 | No hay solicitudes `entrantes` en los datos | `allData` sin filas `entrantes` | La opción "Pendientes" no aparece (comportamiento data-derived, idéntico al resto de estados). Ver §12.7 R-B2. |
+
+## 12.5 Especificación de UI
+
+- En el desplegable "Estado", la nueva opción se muestra con el texto **"Pendientes"** (Inter, mismo `bodyStyle` que las demás opciones).
+- Posición: el listado de opciones se **ordena alfabéticamente** por clave normalizada (`list.sort(...)` en `_getEstadoOptions`), por lo que "Pendientes" se ubicará según ese orden, sin posición fija.
+- El valor seleccionado interno sigue siendo `entrantes`; el usuario solo ve "Pendientes".
+
+## 12.6 Criterios de aceptación verificables
+
+| ID | Afirmación |
+|---|---|
+| CB-CA-01 | Con al menos una solicitud en estado `entrantes`, el filtro de Estado muestra la opción "Pendientes". |
+| CB-CA-02 | Al seleccionar "Pendientes", el listado se filtra exactamente a las solicitudes con `estado_solicitud == 'entrantes'`. |
+| CB-CA-03 | El valor enviado al filtrado y el almacenado en BD permanece como `entrantes` (no se introduce el literal "Pendientes" como valor). |
+| CB-CA-04 | El badge de estado de las filas sigue mostrando "Pendiente" (no se altera `solicitudStatusLabel`). |
+| CB-CA-05 | `getStatus('entrantes')` devuelve "Pendientes"; ningún otro consumidor de `getStatus` se ve afectado (es exclusivo del filtro). |
+| CB-CA-06 | El proyecto compila sin errores ni warnings nuevos. |
+
+## 12.7 Riesgos y supuestos
+
+- **S-B1.** En los datos existen (o existirán) solicitudes con `estado_solicitud == 'entrantes'`; el comentario actual del código confirma que esos estados se estaban ocultando, no que no existan.
+- **R-B1 — Consistencia filtro vs. badge.** El filtro dirá "Pendientes" (plural) y el badge "Pendiente" (singular). Es la decisión explícita del usuario (etiqueta nueva solo en el filtro). No es un defecto.
+- **R-B2 — Opción data-derived.** Como las opciones se derivan de `allData`, "Pendientes" solo aparece si hay filas `entrantes` cargadas. Si se desea que la opción esté **siempre** visible (aun sin datos), habría que inyectarla explícitamente en `_getEstadoOptions`; queda como ajuste opcional fuera de este alcance salvo que se indique lo contrario.
+
+## 12.8 Out of scope (Parte B)
+
+- Cambiar la etiqueta del **badge** de las filas (sigue "Pendiente").
+- Surfacear el valor crudo `'pendiente'` (solo se desoculta `'entrantes'`).
+- Renombrar el valor en base de datos (permanece `entrantes`).
+- Forzar que la opción "Pendientes" aparezca siempre, incluso sin solicitudes en ese estado (ver R-B2).
+- Cualquier cambio en otros filtros (categoría, fecha, orden) o en el buscador.
