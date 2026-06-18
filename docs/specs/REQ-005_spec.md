@@ -98,7 +98,7 @@ PROV-{año}-{idUsuario con padding a 4 dígitos}
 Ej.: fechaRegistro=2025, id_usuario=158  ->  "PROV-2025-0158"
 ```
 
-Si `id_usuario` es nulo, se muestra `PROV-{año}-----`.
+Si `id_usuario` es nulo, se muestra el placeholder `----` (4 guiones, igual que el padding a 4 dígitos). Ej.: `PROV-2025-----` → `PROV-2025-` + `----`.
 
 ---
 
