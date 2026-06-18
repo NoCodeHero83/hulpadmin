@@ -96,7 +96,7 @@ List<String> getStatus(List<String> statuses) {
   return statuses.map((status) {
     switch (status) {
       case 'entrantes':
-        return 'Pendiente';
+        return 'Pendientes';
       case 'canceladas':
         return 'Cancelado';
       case 'finalizadas':

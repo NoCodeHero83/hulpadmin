@@ -400,11 +400,10 @@ class _SolicitudesWidgetState extends State<SolicitudesWidget> {
   List<String> _getEstadoOptions(
     List<VwSolicitudesServiciosCompletaRow> allData,
   ) {
-    // Estados que representan solicitudes pendientes. Siguen siendo válidos en
-    // el negocio, pero por decisión de producto NO se ofrecen como opción de
-    // filtro en la UI. Se cubren ambas variantes presentes en datos:
-    // 'entrantes' (etiqueta "Pendiente") y 'pendiente' (valor crudo).
-    const ocultosEnFiltro = ['entrantes', 'pendiente'];
+    // REQ-006 v1.1.0: el estado 'entrantes' (etiqueta "Pendientes") SÍ se
+    // ofrece ahora como opción de filtro. Solo se mantiene oculta la variante
+    // cruda heredada 'pendiente' para no duplicar la opción.
+    const ocultosEnFiltro = ['pendiente'];
     bool esOculto(String? o) =>
         ocultosEnFiltro.any((x) => _normCompare(o) == _normCompare(x));
 
