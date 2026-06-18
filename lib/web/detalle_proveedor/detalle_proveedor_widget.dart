@@ -1636,11 +1636,12 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
     );
   }
 
-  /// Servicios ofrecidos — REQ-002 v2.0.1: se presenta como etiquetas planas
-  /// (seleccionados / no seleccionados) según el diseño de referencia.
-  /// Misma lógica de datos que el widget custom v1.0.0: se carga el catálogo
-  /// completo de `servicios` y se marca como seleccionado cada servicio cuyo
-  /// id esté entre los del proveedor (`profesional_servicios`).
+  /// Servicios ofrecidos — REQ-005 v1.0.4: se presentan las CATEGORÍAS de los
+  /// servicios del proveedor como etiquetas planas (seleccionadas / no
+  /// seleccionadas). La categoría se deriva por la cadena
+  /// servicio.subcategoria_id -> subcategoria.categoria_id -> categoria.
+  /// "Servicios seleccionados" = categorías de los servicios del proveedor;
+  /// "No seleccionados" = categorías ACTIVAS que el proveedor no ofrece.
   Widget _buildServiciosOfrecidosCard(BuildContext context) {
     return Container(
       width: double.infinity,
@@ -1658,26 +1659,59 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
               if (!snapProf.hasData) {
                 return _serviciosLoader(context);
               }
-              final seleccionadosIds =
+              // REQ-005 v1.0.4: se muestran las CATEGORÍAS de los servicios del
+              // proveedor (no los servicios individuales). La categoría se deriva
+              // por la cadena servicio.subcategoria_id -> subcategoria.categoria_id
+              // -> categoria.
+              final seleccionadosServIds =
                   snapProf.data!.map((e) => e.servicioId).toSet();
 
-              return FutureBuilder<List<ServiciosRow>>(
-                future: ServiciosTable().queryRows(queryFn: (q) => q),
-                builder: (context, snapServ) {
-                  if (!snapServ.hasData) {
+              return FutureBuilder<List<List<SupabaseDataRow>>>(
+                future: Future.wait<List<SupabaseDataRow>>([
+                  ServiciosTable().queryRows(queryFn: (q) => q),
+                  SubcategoriasTable().queryRows(queryFn: (q) => q),
+                  CategoriasTable().queryRows(queryFn: (q) => q),
+                ]),
+                builder: (context, snapCat) {
+                  if (!snapCat.hasData) {
                     return _serviciosLoader(context);
                   }
-                  // Distintos por nombre, preservando orden de aparición.
-                  final vistos = <String>{};
+                  final servicios = snapCat.data![0].cast<ServiciosRow>();
+                  final subcategorias =
+                      snapCat.data![1].cast<SubcategoriasRow>();
+                  final categorias = snapCat.data![2].cast<CategoriasRow>();
+
+                  // subcategoria_id -> categoria_id
+                  final subToCat = <String, String>{
+                    for (final sc in subcategorias) sc.id: sc.categoriaId,
+                  };
+                  // servicio_id -> categoria_id (vía subcategoría)
+                  final servToCat = <String, String>{};
+                  for (final s in servicios) {
+                    final catId = subToCat[s.subcategoriaId];
+                    if (catId != null) servToCat[s.id] = catId;
+                  }
+                  // Categorías que ofrece el proveedor (de sus servicios).
+                  final catSeleccionadasIds = <String>{};
+                  for (final servId in seleccionadosServIds) {
+                    final catId = servToCat[servId];
+                    if (catId != null) catSeleccionadasIds.add(catId);
+                  }
+
+                  // Listas de nombres (distintos por nombre).
+                  // Seleccionadas: categorías ofrecidas (cualquier estado).
+                  // No seleccionadas: solo categorías ACTIVAS no ofrecidas.
+                  final vistosSel = <String>{};
+                  final vistosNo = <String>{};
                   final seleccionados = <String>[];
                   final noSeleccionados = <String>[];
-                  for (final s in snapServ.data!) {
-                    final nombre = s.nombre;
-                    if (nombre.isEmpty || !vistos.add(nombre)) continue;
-                    if (seleccionadosIds.contains(s.id)) {
-                      seleccionados.add(nombre);
-                    } else {
-                      noSeleccionados.add(nombre);
+                  for (final c in categorias) {
+                    final nombre = c.nombre;
+                    if (nombre.isEmpty) continue;
+                    if (catSeleccionadasIds.contains(c.id)) {
+                      if (vistosSel.add(nombre)) seleccionados.add(nombre);
+                    } else if (c.estado.trim().toLowerCase() == 'activo') {
+                      if (vistosNo.add(nombre)) noSeleccionados.add(nombre);
                     }
                   }
 
@@ -1725,8 +1759,9 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
         ),
       );
 
-  /// Máximo de etiquetas visibles por grupo antes de mostrar "Ver más…".
-  static const int _maxChipsVisible = 12;
+  /// Máximo de categorías visibles por grupo antes de mostrar "Ver más…".
+  /// REQ-005 v1.0.4: el botón "Ver más" solo aparece si el grupo supera 10.
+  static const int _maxChipsVisible = 10;
 
   /// Grupo de servicios (título + etiquetas con "Ver más…" si exceden el tope).
   Widget _grupoServicios(
