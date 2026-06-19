@@ -13,6 +13,7 @@
 | Versión | Fecha | Autor | Cambios |
 |---|---|---|---|
 | v1.0.0 | 2026-06-18 | Equipo Hulp | Versión inicial. Edición de: datos del cliente (encabezado, con foto de perfil), datos básicos, facturación, servicios ofrecidos (toggle por categoría), documentos (subir/eliminar + Storage), referencias (editar/eliminar). |
+| **v1.1.0** | **2026-06-18** | **Equipo Hulp** | **Mejoras de subida de documentos/certificaciones (ver §13): (a) se muestra el error real del backend en vez del mensaje genérico; (b) tipos permitidos JPG/JPEG/PNG/WEBP/PDF/DOCX/XLSX (registro y certificaciones); (c) subida MÚLTIPLE de certificaciones; (d) barra de progreso con porcentaje (por archivo completado); (e) mejor UX (hint de formatos, estado de subida). Sin cambios de esquema.** |
 
 ---
 
@@ -226,3 +227,63 @@ Se reutilizan exactamente los patrones ya existentes en el repositorio:
 5. Facturación: implementar el upsert (querySingleRow → update|insert) + update de `registro_tributario`.
 6. Tras cada acción: `safeSetState(() {})` + `Notificacion2Widget` de éxito; errores con `SnackBar`/notificación.
 7. Verificar compilación (`flutter analyze`) y CA-01..CA-11. Actualizar los comentarios `REQ-002 v2.0.x` residuales a la referencia correcta si se tocan esas zonas.
+
+> **Nota de implementación (v1.0.0):** el feedback de éxito se implementó con `SnackBar` (consistente con el `_agregarReferenciaDialog` ya existente en la página) en lugar de `Notificacion2Widget`. Documentos se gestionan en un único pop-up "Gestionar documentos" (subir + eliminar por documento con confirmación), en vez de un ícono de basura directamente sobre cada tarjeta.
+
+---
+
+## 13. Mejoras de subida de documentos y certificaciones (v1.1.0)
+
+### 13.1 Problema detectado
+
+La subida fallaba mostrando el mensaje genérico **"No se pudo subir el archivo"** porque el `catch (_)` ocultaba el error real del backend. La selección de archivo funciona (`selectFiles` usa `withData: true`, los bytes llegan en web); lo que falla es la subida a Storage (`uploadSupabaseStorageFile` → `uploadBinary`).
+
+**Causa más probable (diagnóstico):** un volcado de base de datos a un proyecto Supabase nuevo (sandbox) **no copia los buckets de Storage ni sus políticas RLS**. Si el bucket `archivos` no existe o no tiene política de `INSERT` para el rol autenticado, la subida se rechaza. Esto es configuración del proyecto Supabase, **no** del código Flutter. Ver §13.6 para el setup del bucket.
+
+### 13.2 Error real visible
+
+Los `catch` de subida pasan de `catch (_)` a `catch (e)` y muestran el mensaje real en el `SnackBar` (p. ej. "new row violates row-level security policy", "Bucket not found"), para poder diagnosticar la causa exacta. Aplica a registro, certificaciones y foto de perfil.
+
+### 13.3 Tipos de archivo permitidos
+
+Tanto documentos de registro como certificaciones aceptan: **`jpg`, `jpeg`, `png`, `webp`** (imágenes) y **`pdf`, `docx`, `xlsx`** (documentos). Se implementa con `selectFiles(allowedExtensions: [...])`. El pop-up muestra un texto guía con los formatos admitidos.
+
+### 13.4 Subida múltiple de certificaciones
+
+El selector de certificaciones usa `selectFiles(multiFile: true)`. Cada archivo seleccionado genera **una certificación** (`certificaciones`) bajo la **entidad indicada** en el campo (la entidad aplica a todo el lote). Tras subir, se recarga el listado.
+
+### 13.5 Barra de progreso con porcentaje
+
+Durante la subida se muestra un `LinearProgressIndicator` con valor determinado y el texto **"N% · Subiendo X de M"**.
+
+> **Nota técnica:** el cliente Dart de Supabase Storage (`storage_client` 2.x / `uploadBinary`) **no expone progreso por bytes**. Por eso el porcentaje es **por archivo completado** (`archivosSubidos / totalArchivos`). Para un solo archivo, la barra va de 0% a 100% al completar. Un porcentaje por bytes requeriría un uploader HTTP propio (fuera de alcance).
+
+### 13.6 Setup de Storage en sandbox (acción del usuario, no código)
+
+Para que la subida funcione en el proyecto sandbox, debe existir el bucket `archivos` con políticas. En el SQL Editor de sandbox:
+
+```sql
+insert into storage.buckets (id, name, public)
+values ('archivos', 'archivos', true)
+on conflict (id) do nothing;
+
+create policy "archivos_insert" on storage.objects
+  for insert to authenticated with check (bucket_id = 'archivos');
+create policy "archivos_select" on storage.objects
+  for select using (bucket_id = 'archivos');
+create policy "archivos_update" on storage.objects
+  for update to authenticated using (bucket_id = 'archivos');
+create policy "archivos_delete" on storage.objects
+  for delete to authenticated using (bucket_id = 'archivos');
+```
+
+### 13.7 Criterios de aceptación (v1.1.0)
+
+| ID | Afirmación |
+|---|---|
+| CA-13-1 | Un fallo de subida muestra el **mensaje real** del backend (no el genérico). |
+| CA-13-2 | El selector solo admite `jpg/jpeg/png/webp/pdf/docx/xlsx` (registro y certificaciones). |
+| CA-13-3 | Se pueden seleccionar y subir **varias** certificaciones a la vez; cada archivo crea una fila en `certificaciones` con la entidad indicada. |
+| CA-13-4 | Durante la subida se muestra una barra de progreso con porcentaje por archivo (`X/M`). |
+| CA-13-5 | El pop-up muestra los formatos permitidos y el estado de subida; mantiene el patrón visual existente. |
+| CA-13-6 | Sin cambios de esquema; el proyecto compila. |

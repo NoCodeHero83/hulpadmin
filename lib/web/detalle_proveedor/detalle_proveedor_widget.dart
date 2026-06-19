@@ -1287,10 +1287,13 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
     );
   }
 
-  /// REQ-007: pop-up para gestionar documentos (subir/reemplazar/eliminar
-  /// registro y certificaciones). Borra también el archivo de Storage.
+  /// REQ-007 v1.1.0: pop-up para gestionar documentos (subir/reemplazar/
+  /// eliminar registro y certificaciones). Tipos: jpg/jpeg/png/webp/pdf/docx/
+  /// xlsx. Subida múltiple de certificaciones, barra de progreso y error real.
   void _gestionarDocumentosDialog(
       BuildContext context, UsuariosRow? usuario) async {
+    const allowedExt = ['jpg', 'jpeg', 'png', 'webp', 'pdf', 'docx', 'xlsx'];
+    const formatosHint = 'Formatos: JPG, PNG, WEBP, PDF, DOCX, XLSX';
     final certsInit = await CertificacionesTable().queryRows(
       queryFn: (q) => q.eqOrNull('usuario_id', widget.proveedorId),
     );
@@ -1302,46 +1305,68 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
     final entidadCtrl = TextEditingController();
     bool cambios = false;
     bool busy = false;
+    double? progreso;
+    String progresoTexto = '';
 
     await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
         return StatefulBuilder(builder: (ctx, setLocal) {
-          Future<String?> pickAndUpload(String folder) async {
-            final files = await selectFiles(
-                storageFolderPath: folder, multiFile: false);
-            if (files == null || files.isEmpty) return null;
-            final urls = await uploadSupabaseStorageFiles(
-                bucketName: 'archivos', selectedFiles: files);
-            return urls.isNotEmpty ? urls.first : null;
+          Future<List<String>> subirConProgreso(List<SelectedFile> files) async {
+            final urls = <String>[];
+            for (var i = 0; i < files.length; i++) {
+              setLocal(() {
+                progreso = i / files.length;
+                progresoTexto = 'Subiendo ${i + 1} de ${files.length}';
+              });
+              final url = await uploadSupabaseStorageFile(
+                  bucketName: 'archivos', selectedFile: files[i]);
+              urls.add(url);
+              setLocal(() => progreso = (i + 1) / files.length);
+            }
+            return urls;
           }
 
-          Future<void> subirRegistro(String campo, String folder, String? actual,
-              void Function(String?) set) async {
-            setLocal(() => busy = true);
+          Future<void> subirRegistro(String campo, String folder,
+              String? actual, void Function(String?) set) async {
+            final files = await selectFiles(
+                storageFolderPath: folder,
+                allowedExtensions: allowedExt,
+                multiFile: false);
+            if (files == null || files.isEmpty) return;
+            setLocal(() {
+              busy = true;
+              progreso = 0;
+              progresoTexto = 'Subiendo...';
+            });
             try {
-              final url = await pickAndUpload(folder);
-              if (url != null) {
+              final urls = await subirConProgreso(files);
+              if (urls.isNotEmpty) {
                 await UsuariosTable().update(
-                  data: {campo: url},
+                  data: {campo: urls.first},
                   matchingRows: (r) => r.eqOrNull('id', widget.proveedorId),
                 );
-                if (actual != null && actual.isNotEmpty && actual != url) {
+                if (actual != null &&
+                    actual.isNotEmpty &&
+                    actual != urls.first) {
                   try {
                     await deleteSupabaseFileFromPublicUrl(actual);
                   } catch (_) {}
                 }
                 cambios = true;
-                setLocal(() => set(url));
+                setLocal(() => set(urls.first));
               }
-            } catch (_) {
+            } catch (e) {
               if (ctx.mounted) {
                 ScaffoldMessenger.of(ctx).showSnackBar(
-                    const SnackBar(content: Text('No se pudo subir el archivo')));
+                    SnackBar(content: Text('No se pudo subir: $e')));
               }
             } finally {
-              setLocal(() => busy = false);
+              setLocal(() {
+                busy = false;
+                progreso = null;
+              });
             }
           }
 
@@ -1363,38 +1388,50 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
             });
           }
 
-          Future<void> agregarCert() async {
+          Future<void> agregarCerts() async {
             if (entidadCtrl.text.trim().isEmpty) {
               ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
                   content: Text('Ingresa el nombre de la entidad')));
               return;
             }
-            setLocal(() => busy = true);
+            final files = await selectFiles(
+                storageFolderPath: 'certificaciones',
+                allowedExtensions: allowedExt,
+                multiFile: true);
+            if (files == null || files.isEmpty) return;
+            setLocal(() {
+              busy = true;
+              progreso = 0;
+              progresoTexto = 'Subiendo...';
+            });
             try {
-              final url = await pickAndUpload('certificaciones');
-              if (url != null) {
+              final urls = await subirConProgreso(files);
+              for (final url in urls) {
                 await CertificacionesTable().insert({
                   'usuario_id': widget.proveedorId,
                   'entidad_certificadora': entidadCtrl.text.trim(),
                   'documento_url': url,
                 });
-                final fresh = await CertificacionesTable().queryRows(
-                  queryFn: (q) => q.eqOrNull('usuario_id', widget.proveedorId),
-                );
-                certs
-                  ..clear()
-                  ..addAll(fresh);
-                entidadCtrl.clear();
-                cambios = true;
-                setLocal(() {});
               }
-            } catch (_) {
+              final fresh = await CertificacionesTable().queryRows(
+                queryFn: (q) => q.eqOrNull('usuario_id', widget.proveedorId),
+              );
+              certs
+                ..clear()
+                ..addAll(fresh);
+              entidadCtrl.clear();
+              cambios = true;
+              setLocal(() {});
+            } catch (e) {
               if (ctx.mounted) {
-                ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
-                    content: Text('No se pudo agregar la certificación')));
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                    SnackBar(content: Text('No se pudo subir: $e')));
               }
             } finally {
-              setLocal(() => busy = false);
+              setLocal(() {
+                busy = false;
+                progreso = null;
+              });
             }
           }
 
@@ -1450,7 +1487,7 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560, maxHeight: 620),
+              constraints: const BoxConstraints(maxWidth: 560, maxHeight: 640),
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Column(
@@ -1474,7 +1511,15 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
                                 )),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 4),
+                    Text(formatosHint,
+                        style: FlutterFlowTheme.of(ctx).bodySmall.override(
+                              font: GoogleFonts.inter(),
+                              fontSize: 12,
+                              letterSpacing: 0,
+                              color: FlutterFlowTheme.of(ctx).secondaryText,
+                            )),
+                    const SizedBox(height: 12),
                     Flexible(
                       child: SingleChildScrollView(
                         child: Column(
@@ -1545,18 +1590,52 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
                                 Padding(
                                   padding: const EdgeInsets.only(bottom: 2),
                                   child: OutlinedButton.icon(
-                                    onPressed: busy ? null : agregarCert,
+                                    onPressed: busy ? null : agregarCerts,
                                     icon: const Icon(Icons.upload_file_outlined,
                                         size: 18),
-                                    label: const Text('Agregar'),
+                                    label: const Text('Subir'),
                                   ),
                                 ),
                               ],
                             ),
+                            Text(
+                                'Puedes seleccionar varios archivos; cada uno se '
+                                'guarda como una certificación de esa entidad.',
+                                style: FlutterFlowTheme.of(ctx)
+                                    .bodySmall
+                                    .override(
+                                      font: GoogleFonts.inter(),
+                                      fontSize: 11,
+                                      letterSpacing: 0,
+                                      color: FlutterFlowTheme.of(ctx)
+                                          .secondaryText,
+                                    )),
                           ],
                         ),
                       ),
                     ),
+                    if (progreso != null) ...[
+                      const SizedBox(height: 12),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: LinearProgressIndicator(
+                          value: progreso,
+                          minHeight: 8,
+                          backgroundColor: const Color(0xFFE0E0E0),
+                          color: FlutterFlowTheme.of(ctx).primary,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        '${((progreso ?? 0) * 100).round()}% · $progresoTexto',
+                        style: FlutterFlowTheme.of(ctx).bodySmall.override(
+                              font: GoogleFonts.inter(),
+                              fontSize: 12,
+                              letterSpacing: 0,
+                              color: FlutterFlowTheme.of(ctx).secondaryText,
+                            ),
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     Align(
                       alignment: Alignment.centerRight,
