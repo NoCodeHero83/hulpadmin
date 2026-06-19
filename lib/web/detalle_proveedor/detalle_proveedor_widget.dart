@@ -2154,8 +2154,10 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
             child: CircularProgressIndicator(strokeWidth: 2),
           );
         }
+        // REQ-005 v1.0.5: chips del encabezado muestran CATEGORÍAS distintas
+        // (no servicios), coherente con "Servicios ofrecidos".
         final nombres = snapshot.data!
-            .map((e) => e.servicioNombre)
+            .map((e) => e.categoriaNombre)
             .where((e) => e != null && e.isNotEmpty)
             .map((e) => e!)
             .toSet()
