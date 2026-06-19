@@ -1938,10 +1938,7 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
       width: double.infinity,
       decoration: _cardDecoration,
       padding: const EdgeInsets.all(24),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          LayoutBuilder(
+      child: LayoutBuilder(
         builder: (context, constraints) {
           final narrow = constraints.maxWidth < 900;
           final left = Row(
@@ -1973,16 +1970,29 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      nombre.isEmpty ? 'Sin nombre' : nombre,
-                      style: FlutterFlowTheme.of(context).bodyMedium.override(
-                            font:
-                                GoogleFonts.inter(fontWeight: FontWeight.w700),
-                            fontSize: 24,
-                            letterSpacing: 0,
-                            fontWeight: FontWeight.w700,
-                            color: FlutterFlowTheme.of(context).primaryText,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            nombre.isEmpty ? 'Sin nombre' : nombre,
+                            style: FlutterFlowTheme.of(context)
+                                .bodyMedium
+                                .override(
+                                  font: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w700),
+                                  fontSize: 24,
+                                  letterSpacing: 0,
+                                  fontWeight: FontWeight.w700,
+                                  color:
+                                      FlutterFlowTheme.of(context).primaryText,
+                                ),
                           ),
+                        ),
+                        const SizedBox(width: 6),
+                        _editIconButton(context,
+                            () => _editDatosClienteDialog(context, usuario)),
+                      ],
                     ),
                     const SizedBox(height: 8),
                     Container(
@@ -2128,14 +2138,6 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
             ],
           );
         },
-          ),
-          Positioned(
-            top: -8,
-            right: -8,
-            child: _editIconButton(
-                context, () => _editDatosClienteDialog(context, usuario)),
-          ),
-        ],
       ),
     );
   }
