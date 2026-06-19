@@ -228,4 +228,9 @@ class VwSolicitudesServiciosCompletaRow extends SupabaseDataRow {
       getField<int>('proveedor_servicios_completados');
   set proveedorServiciosCompletados(int? value) =>
       setField<int>('proveedor_servicios_completados', value);
+
+  // REQ-006 v1.0.0: ciudad de la solicitud (ciudades.nombre vía LEFT JOIN en la vista).
+  String? get solicitudCiudad => getField<String>('solicitud_ciudad');
+  set solicitudCiudad(String? value) =>
+      setField<String>('solicitud_ciudad', value);
 }
