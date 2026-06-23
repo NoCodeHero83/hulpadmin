@@ -7,8 +7,10 @@ import '/flutter_flow/form_field_controller.dart';
 import 'dart:ui';
 import '/custom_code/widgets/index.dart' as custom_widgets;
 import '/flutter_flow/custom_functions.dart' as functions;
+import 'dart:math' show min;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'informacion_proveedor_model.dart';
 export 'informacion_proveedor_model.dart';
@@ -63,6 +65,257 @@ class _InformacionProveedorWidgetState
 
     super.dispose();
   }
+
+  // ── REQ-002 helpers ──────────────────────────────────────────────────────
+
+  /// Extracts the filename from the last path segment of [url].
+  String _extractFilename(String? url) {
+    if (url == null || url.isEmpty) return 'Sin archivo';
+    try {
+      final segs = Uri.parse(url).pathSegments;
+      return segs.isNotEmpty ? segs.last : 'Sin archivo';
+    } catch (_) {
+      return 'Sin archivo';
+    }
+  }
+
+  /// Returns true if [url] points to an image file (jpg/jpeg/png/webp).
+  bool _isImageUrl(String url) {
+    final ext =
+        url.toLowerCase().split('?').first.split('.').last;
+    return ['jpg', 'jpeg', 'png', 'webp'].contains(ext);
+  }
+
+  Widget _pdfPlaceholder() => Container(
+        color: const Color(0xFFEAEAEA),
+        child: const Center(
+          child: Icon(Icons.picture_as_pdf_outlined,
+              size: 40, color: Color(0xFFD32F2F)),
+        ),
+      );
+
+  Widget _emptyPlaceholder(BuildContext context) => Container(
+        color: const Color(0xFFEAEAEA),
+        child: Center(
+          child: Icon(Icons.insert_drive_file_outlined,
+              size: 40,
+              color: FlutterFlowTheme.of(context).secondaryText),
+        ),
+      );
+
+  /// REQ-003: invisible spacer that holds a grid column slot.
+  Widget _buildEmptyColumn() => const Expanded(child: SizedBox());
+
+  /// REQ-003: builds a row of up to 3 document cards with spacing.
+  /// Empty slots at the end are filled with invisible Expanded spacers.
+  Widget _buildDocRow(List<Widget> expandedCards) {
+    assert(expandedCards.length <= 3);
+    final items = <Widget>[];
+    for (int i = 0; i < 3; i++) {
+      if (i > 0) items.add(const SizedBox(width: 12));
+      items.add(i < expandedCards.length
+          ? expandedCards[i]
+          : _buildEmptyColumn());
+    }
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: items);
+  }
+
+  /// Builds a document card used in both Zona A (registro) and Zona B (certs).
+  Widget _buildDocumentCard(
+    BuildContext context, {
+    required String label,
+    required String? url,
+    required String downloadPrefix,
+    required String? proveedorId,
+    DateTime? uploadDate, // REQ-003: fecha de subida opcional
+  }) {
+    final docKey = '${downloadPrefix}_${proveedorId ?? 'x'}';
+    final isDownloading = _model.downloadingDocs[docKey] == true;
+    final hasUrl = url != null && url.isNotEmpty;
+    final filename = _extractFilename(url);
+
+    return Container(
+      constraints: const BoxConstraints(minWidth: 160),
+      decoration: BoxDecoration(
+        color: FlutterFlowTheme.of(context).secondaryBackground,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: FlutterFlowTheme.of(context).tertiary),
+        boxShadow: const [
+          BoxShadow(blurRadius: 4, color: Colors.black12, offset: Offset(0, 2))
+        ],
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Label ─────────────────────────────
+          Center(
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: FlutterFlowTheme.of(context).bodyMedium.override(
+                    font: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                    fontSize: 14,
+                    letterSpacing: 0,
+                    fontWeight: FontWeight.w600,
+                    color: FlutterFlowTheme.of(context).primary,
+                  ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // ── Thumbnail ─────────────────────────
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              height: 120,
+              width: double.infinity,
+              child: hasUrl && _isImageUrl(url!)
+                  ? Image.network(url, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _pdfPlaceholder())
+                  : hasUrl
+                      ? _pdfPlaceholder()
+                      : _emptyPlaceholder(context),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // ── Filename row ──────────────────────
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  filename,
+                  overflow: TextOverflow.ellipsis,
+                  style: FlutterFlowTheme.of(context).bodySmall.override(
+                        font: GoogleFonts.inter(),
+                        fontSize: 11,
+                        letterSpacing: 0,
+                        color: FlutterFlowTheme.of(context).secondaryText,
+                      ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              if (hasUrl)
+                const Icon(Icons.check_circle,
+                    size: 16, color: Color(0xFF43A047))
+              else
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE0E0E0),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'No cargado',
+                    style: FlutterFlowTheme.of(context).bodySmall.override(
+                          font: GoogleFonts.inter(),
+                          fontSize: 11,
+                          letterSpacing: 0,
+                          color: FlutterFlowTheme.of(context).secondaryText,
+                        ),
+                  ),
+                ),
+            ],
+          ),
+          // ── Upload date (REQ-003) ──────────────────
+          if (uploadDate != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Subido el ${DateFormat('dd/MM/yyyy').format(uploadDate)}',
+              style: FlutterFlowTheme.of(context).bodySmall.override(
+                    font: GoogleFonts.inter(),
+                    fontSize: 11,
+                    letterSpacing: 0,
+                    color: FlutterFlowTheme.of(context).secondaryText,
+                  ),
+            ),
+          ],
+          // ── Action buttons (only when URL present) ──
+          if (hasUrl) ...[
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.remove_red_eye_outlined, size: 16),
+                label: const Text('Ver documento'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: FlutterFlowTheme.of(context).primary,
+                  side: BorderSide(
+                      color: FlutterFlowTheme.of(context).primary),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  textStyle: GoogleFonts.inter(fontSize: 13),
+                ),
+                onPressed: () async {
+                  try {
+                    await _model.openDocument(url!);
+                  } catch (_) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content: Text('No se pudo abrir el documento'),
+                      ));
+                    }
+                  }
+                },
+              ),
+            ),
+            const SizedBox(height: 6),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                icon: isDownloading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.download_outlined, size: 16),
+                label:
+                    Text(isDownloading ? 'Descargando...' : 'Descargar'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: FlutterFlowTheme.of(context).primary,
+                  side: BorderSide(
+                      color: FlutterFlowTheme.of(context).primary),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  textStyle: GoogleFonts.inter(fontSize: 13),
+                ),
+                onPressed: isDownloading
+                    ? null
+                    : () async {
+                        final ext = filename.contains('.')
+                            ? filename.split('.').last
+                            : 'bin';
+                        final fileName =
+                            '${downloadPrefix}_${proveedorId ?? 'doc'}.$ext';
+                        safeSetState(
+                            () => _model.downloadingDocs[docKey] = true);
+                        try {
+                          await _model.downloadDocument(url!, fileName);
+                        } catch (e) {
+                          if (mounted) {
+                            final msg = e.toString().toLowerCase().contains('timeout')
+                                ? 'La descarga tardó demasiado. Intente nuevamente.'
+                                : 'Error al descargar el documento';
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(msg)));
+                          }
+                        } finally {
+                          safeSetState(
+                              () => _model.downloadingDocs[docKey] = false);
+                        }
+                      },
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ── end REQ-002 helpers ───────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -2238,32 +2491,213 @@ class _InformacionProveedorWidgetState
                             ),
                           ),
                         ),
-                        Align(
-                          alignment: AlignmentDirectional(-1.0, 0.0),
-                          child: Padding(
-                            padding: EdgeInsetsDirectional.fromSTEB(
-                                0.0, 20.0, 0.0, 0.0),
-                            child: Text(
-                              'Certificaciones',
-                              style: FlutterFlowTheme.of(context)
-                                  .bodyMedium
-                                  .override(
-                                    font: GoogleFonts.inter(
-                                      fontWeight: FontWeight.normal,
-                                      fontStyle: FlutterFlowTheme.of(context)
+                        // ── REQ-003 · Zona A: Documentos de Registro ─────
+                        Builder(builder: (context) {
+                          final cedula = columnUsuariosRow?.cedula;
+                          final cuenta = columnUsuariosRow?.cuentaBancaria;
+                          final contrato = columnUsuariosRow?.contrato;
+                          final uploadDate = columnUsuariosRow?.fechaRegistro;
+                          final loadedA = [cedula, cuenta, contrato]
+                              .where((u) => u != null && u.isNotEmpty)
+                              .length;
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // ── Header global "Documentos" ──────────────
+                              Padding(
+                                padding: const EdgeInsetsDirectional.fromSTEB(
+                                    0, 16, 0, 4),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.description_outlined,
+                                        size: 22,
+                                        color: FlutterFlowTheme.of(context)
+                                            .primaryText),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Documentos',
+                                      style: FlutterFlowTheme.of(context)
                                           .bodyMedium
-                                          .fontStyle,
+                                          .override(
+                                            font: GoogleFonts.inter(
+                                                fontWeight: FontWeight.w700),
+                                            fontSize: 20,
+                                            letterSpacing: 0,
+                                            fontWeight: FontWeight.w700,
+                                          ),
                                     ),
-                                    color:
-                                        FlutterFlowTheme.of(context).secondary,
-                                    fontSize: 14.0,
-                                    letterSpacing: 0.0,
-                                    fontWeight: FontWeight.normal,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .bodyMedium
-                                        .fontStyle,
+                                  ],
+                                ),
+                              ),
+                              // ── Subheader "Documentos de registro" ──────
+                              Padding(
+                                padding: const EdgeInsetsDirectional.fromSTEB(
+                                    0, 16, 0, 12),
+                                child: Text(
+                                  'Documentos de registro',
+                                  style: FlutterFlowTheme.of(context)
+                                      .bodyMedium
+                                      .override(
+                                        font: GoogleFonts.inter(
+                                            fontWeight: FontWeight.w600),
+                                        fontSize: 16,
+                                        letterSpacing: 0,
+                                        fontWeight: FontWeight.w600,
+                                        color: FlutterFlowTheme.of(context)
+                                            .primary,
+                                      ),
+                                ),
+                              ),
+                              // ── CA-12: empty state Zona A ────────────────
+                              if (loadedA == 0)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 32),
+                                  child: Center(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.upload_file_outlined,
+                                          size: 48,
+                                          color: FlutterFlowTheme.of(context)
+                                              .secondaryText,
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Text(
+                                          'Este proveedor aún no tiene documentos de registro cargados',
+                                          textAlign: TextAlign.center,
+                                          style: FlutterFlowTheme.of(context)
+                                              .bodyMedium
+                                              .override(
+                                                font: GoogleFonts.inter(
+                                                    fontWeight:
+                                                        FontWeight.w600),
+                                                fontWeight: FontWeight.w600,
+                                                letterSpacing: 0,
+                                              ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          'Los documentos de cédula, cuenta bancaria y contrato aparecerán aquí una vez que el proveedor los cargue.',
+                                          textAlign: TextAlign.center,
+                                          style: FlutterFlowTheme.of(context)
+                                              .bodySmall
+                                              .override(
+                                                font: GoogleFonts.inter(),
+                                                letterSpacing: 0,
+                                                color: FlutterFlowTheme.of(
+                                                        context)
+                                                    .secondaryText,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                            ),
+                                )
+                              else
+                                // ── CA-13/15: responsivo ─────────────────────
+                                LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    final isMobile =
+                                        constraints.maxWidth < 600;
+                                    if (isMobile) {
+                                      // Móvil: 1 columna
+                                      return Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: [
+                                          if (cedula != null &&
+                                              cedula.isNotEmpty) ...[
+                                            _buildDocumentCard(context,
+                                                label: 'Cédula',
+                                                url: cedula,
+                                                downloadPrefix: 'cedula',
+                                                proveedorId:
+                                                    widget.proveedorId,
+                                                uploadDate: uploadDate),
+                                            const SizedBox(height: 12),
+                                          ],
+                                          if (cuenta != null &&
+                                              cuenta.isNotEmpty) ...[
+                                            _buildDocumentCard(context,
+                                                label: 'Cuenta bancaria',
+                                                url: cuenta,
+                                                downloadPrefix:
+                                                    'cuenta_bancaria',
+                                                proveedorId:
+                                                    widget.proveedorId,
+                                                uploadDate: uploadDate),
+                                            const SizedBox(height: 12),
+                                          ],
+                                          if (contrato != null &&
+                                              contrato.isNotEmpty)
+                                            _buildDocumentCard(context,
+                                                label: 'Contrato',
+                                                url: contrato,
+                                                downloadPrefix: 'contrato',
+                                                proveedorId:
+                                                    widget.proveedorId,
+                                                uploadDate: uploadDate),
+                                        ],
+                                      );
+                                    }
+                                    // Desktop: 3 columnas con slots invisibles
+                                    return _buildDocRow([
+                                      if (cedula != null && cedula.isNotEmpty)
+                                        Expanded(
+                                          child: _buildDocumentCard(context,
+                                              label: 'Cédula',
+                                              url: cedula,
+                                              downloadPrefix: 'cedula',
+                                              proveedorId: widget.proveedorId,
+                                              uploadDate: uploadDate),
+                                        ),
+                                      if (cuenta != null && cuenta.isNotEmpty)
+                                        Expanded(
+                                          child: _buildDocumentCard(context,
+                                              label: 'Cuenta bancaria',
+                                              url: cuenta,
+                                              downloadPrefix: 'cuenta_bancaria',
+                                              proveedorId: widget.proveedorId,
+                                              uploadDate: uploadDate),
+                                        ),
+                                      if (contrato != null &&
+                                          contrato.isNotEmpty)
+                                        Expanded(
+                                          child: _buildDocumentCard(context,
+                                              label: 'Contrato',
+                                              url: contrato,
+                                              downloadPrefix: 'contrato',
+                                              proveedorId: widget.proveedorId,
+                                              uploadDate: uploadDate),
+                                        ),
+                                    ]);
+                                  },
+                                ),
+                            ],
+                          );
+                        }),
+                        // ── end Zona A ────────────────────────────────────
+
+                        // ── REQ-003 · Zona B: Certificaciones ────────────
+                        Padding(
+                          padding: const EdgeInsetsDirectional.fromSTEB(
+                              0, 24, 0, 12),
+                          child: Text(
+                            'Certificaciones',
+                            style: FlutterFlowTheme.of(context)
+                                .bodyMedium
+                                .override(
+                                  font: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w600),
+                                  fontSize: 16,
+                                  letterSpacing: 0,
+                                  fontWeight: FontWeight.w600,
+                                  color:
+                                      FlutterFlowTheme.of(context).primary,
+                                ),
                           ),
                         ),
                         FutureBuilder<List<CertificacionesRow>>(
@@ -2274,7 +2708,6 @@ class _InformacionProveedorWidgetState
                             ),
                           ),
                           builder: (context, snapshot) {
-                            // Customize what your widget looks like when it's loading.
                             if (!snapshot.hasData) {
                               return Center(
                                 child: SizedBox(
@@ -2288,276 +2721,126 @@ class _InformacionProveedorWidgetState
                                 ),
                               );
                             }
-                            List<CertificacionesRow>
-                                containerCertificacionesRowList =
-                                snapshot.data!;
+                            // REQ-003: solo certs con URL válida
+                            final validCerts = snapshot.data!
+                                .where((c) => c.documentoUrl.isNotEmpty)
+                                .toList();
 
-                            return Container(
-                              decoration: BoxDecoration(),
-                              child: Padding(
-                                padding: EdgeInsetsDirectional.fromSTEB(
-                                    0.0, 10.0, 0.0, 0.0),
-                                child: Builder(
-                                  builder: (context) {
-                                    final cuentasBancarias =
-                                        containerCertificacionesRowList
-                                            .toList();
-
-                                    return Column(
-                                      mainAxisSize: MainAxisSize.max,
-                                      children:
-                                          List.generate(cuentasBancarias.length,
-                                              (cuentasBancariasIndex) {
-                                        final cuentasBancariasItem =
-                                            cuentasBancarias[
-                                                cuentasBancariasIndex];
-                                        return Padding(
-                                          padding:
-                                              EdgeInsetsDirectional.fromSTEB(
-                                                  0.0, 16.0, 0.0, 0.0),
-                                          child: Container(
-                                            width: MediaQuery.sizeOf(context)
-                                                    .width *
-                                                1.0,
-                                            decoration: BoxDecoration(
+                            if (validCerts.isEmpty) {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 32),
+                                child: Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.workspace_premium_outlined,
+                                        size: 48,
+                                        color: FlutterFlowTheme.of(context)
+                                            .secondaryText,
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        'Este proveedor aún no tiene certificaciones registradas',
+                                        textAlign: TextAlign.center,
+                                        style: FlutterFlowTheme.of(context)
+                                            .bodyMedium
+                                            .override(
+                                              font: GoogleFonts.inter(
+                                                  fontWeight: FontWeight.w600),
+                                              fontWeight: FontWeight.w600,
+                                              letterSpacing: 0,
+                                            ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        'Las certificaciones aparecerán aquí una vez que el proveedor las cargue en la aplicación.',
+                                        textAlign: TextAlign.center,
+                                        style: FlutterFlowTheme.of(context)
+                                            .bodySmall
+                                            .override(
+                                              font: GoogleFonts.inter(),
+                                              letterSpacing: 0,
                                               color:
                                                   FlutterFlowTheme.of(context)
-                                                      .secondaryBackground,
-                                              borderRadius:
-                                                  BorderRadius.circular(8.0),
-                                              border: Border.all(
-                                                color:
-                                                    FlutterFlowTheme.of(context)
-                                                        .tertiary,
-                                              ),
+                                                      .secondaryText,
                                             ),
-                                            child: Padding(
-                                              padding: EdgeInsets.all(8.0),
-                                              child: Column(
-                                                mainAxisSize: MainAxisSize.max,
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Row(
-                                                    mainAxisSize:
-                                                        MainAxisSize.max,
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .spaceBetween,
-                                                    children: [
-                                                      Text(
-                                                        '${functions.obtenerNroLiteral(1)} certificación',
-                                                        style:
-                                                            FlutterFlowTheme.of(
-                                                                    context)
-                                                                .bodyMedium
-                                                                .override(
-                                                                  font:
-                                                                      GoogleFonts
-                                                                          .inter(
-                                                                    fontWeight: FlutterFlowTheme.of(
-                                                                            context)
-                                                                        .bodyMedium
-                                                                        .fontWeight,
-                                                                    fontStyle: FlutterFlowTheme.of(
-                                                                            context)
-                                                                        .bodyMedium
-                                                                        .fontStyle,
-                                                                  ),
-                                                                  color: FlutterFlowTheme.of(
-                                                                          context)
-                                                                      .secondary,
-                                                                  letterSpacing:
-                                                                      0.0,
-                                                                  fontWeight: FlutterFlowTheme.of(
-                                                                          context)
-                                                                      .bodyMedium
-                                                                      .fontWeight,
-                                                                  fontStyle: FlutterFlowTheme.of(
-                                                                          context)
-                                                                      .bodyMedium
-                                                                      .fontStyle,
-                                                                ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  Text(
-                                                    'Nombre de la entidad *',
-                                                    style: FlutterFlowTheme.of(
-                                                            context)
-                                                        .bodyMedium
-                                                        .override(
-                                                          font:
-                                                              GoogleFonts.inter(
-                                                            fontWeight:
-                                                                FlutterFlowTheme.of(
-                                                                        context)
-                                                                    .bodyMedium
-                                                                    .fontWeight,
-                                                            fontStyle:
-                                                                FlutterFlowTheme.of(
-                                                                        context)
-                                                                    .bodyMedium
-                                                                    .fontStyle,
-                                                          ),
-                                                          fontSize: 14.0,
-                                                          letterSpacing: 0.0,
-                                                          fontWeight:
-                                                              FlutterFlowTheme.of(
-                                                                      context)
-                                                                  .bodyMedium
-                                                                  .fontWeight,
-                                                          fontStyle:
-                                                              FlutterFlowTheme.of(
-                                                                      context)
-                                                                  .bodyMedium
-                                                                  .fontStyle,
-                                                        ),
-                                                  ),
-                                                  Container(
-                                                    width: MediaQuery.sizeOf(
-                                                                context)
-                                                            .width *
-                                                        1.0,
-                                                    height: 40.0,
-                                                    decoration: BoxDecoration(
-                                                      color: Color(0xFFF0F0EF),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              8.0),
-                                                      border: Border.all(
-                                                        color:
-                                                            FlutterFlowTheme.of(
-                                                                    context)
-                                                                .tertiary,
-                                                      ),
-                                                    ),
-                                                    child: Align(
-                                                      alignment:
-                                                          AlignmentDirectional(
-                                                              -1.0, 0.0),
-                                                      child: Padding(
-                                                        padding:
-                                                            EdgeInsetsDirectional
-                                                                .fromSTEB(
-                                                                    10.0,
-                                                                    0.0,
-                                                                    0.0,
-                                                                    0.0),
-                                                        child: Text(
-                                                          cuentasBancariasItem
-                                                              .entidadCertificadora,
-                                                          style: FlutterFlowTheme
-                                                                  .of(context)
-                                                              .bodyMedium
-                                                              .override(
-                                                                font:
-                                                                    GoogleFonts
-                                                                        .inter(
-                                                                  fontWeight: FlutterFlowTheme.of(
-                                                                          context)
-                                                                      .bodyMedium
-                                                                      .fontWeight,
-                                                                  fontStyle: FlutterFlowTheme.of(
-                                                                          context)
-                                                                      .bodyMedium
-                                                                      .fontStyle,
-                                                                ),
-                                                                letterSpacing:
-                                                                    0.0,
-                                                                fontWeight: FlutterFlowTheme.of(
-                                                                        context)
-                                                                    .bodyMedium
-                                                                    .fontWeight,
-                                                                fontStyle: FlutterFlowTheme.of(
-                                                                        context)
-                                                                    .bodyMedium
-                                                                    .fontStyle,
-                                                              ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  Container(
-                                                    width: MediaQuery.sizeOf(
-                                                                context)
-                                                            .width *
-                                                        1.0,
-                                                    decoration: BoxDecoration(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              8.0),
-                                                      border: Border.all(
-                                                        color:
-                                                            FlutterFlowTheme.of(
-                                                                    context)
-                                                                .tertiary,
-                                                      ),
-                                                    ),
-                                                    child: Padding(
-                                                      padding:
-                                                          EdgeInsets.all(8.0),
-                                                      child: Container(
-                                                        width: 100.0,
-                                                        height: 70.0,
-                                                        decoration:
-                                                            BoxDecoration(
-                                                          color:
-                                                              Color(0xFFEAEAEA),
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(
-                                                                      6.0),
-                                                        ),
-                                                        child: Align(
-                                                          alignment:
-                                                              AlignmentDirectional(
-                                                                  0.0, 0.0),
-                                                          child: Text(
-                                                            'Archivo',
-                                                            style: FlutterFlowTheme
-                                                                    .of(context)
-                                                                .bodyMedium
-                                                                .override(
-                                                                  font:
-                                                                      GoogleFonts
-                                                                          .inter(
-                                                                    fontWeight: FlutterFlowTheme.of(
-                                                                            context)
-                                                                        .bodyMedium
-                                                                        .fontWeight,
-                                                                    fontStyle: FlutterFlowTheme.of(
-                                                                            context)
-                                                                        .bodyMedium
-                                                                        .fontStyle,
-                                                                  ),
-                                                                  letterSpacing:
-                                                                      0.0,
-                                                                  fontWeight: FlutterFlowTheme.of(
-                                                                          context)
-                                                                      .bodyMedium
-                                                                      .fontWeight,
-                                                                  fontStyle: FlutterFlowTheme.of(
-                                                                          context)
-                                                                      .bodyMedium
-                                                                      .fontStyle,
-                                                                ),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ].divide(
-                                                    SizedBox(height: 10.0)),
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      }),
-                                    );
-                                  },
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
+                              );
+                            }
+
+                            // CA-13/14/15: responsivo
+                            return LayoutBuilder(
+                              builder: (context, constraints) {
+                                final isMobile =
+                                    constraints.maxWidth < 600;
+
+                                if (isMobile) {
+                                  // Móvil: 1 columna
+                                  final mobileItems = <Widget>[];
+                                  for (int i = 0;
+                                      i < validCerts.length;
+                                      i++) {
+                                    mobileItems.add(_buildDocumentCard(
+                                      context,
+                                      label: validCerts[i]
+                                          .entidadCertificadora,
+                                      url: validCerts[i].documentoUrl,
+                                      downloadPrefix: 'certificacion',
+                                      proveedorId: validCerts[i].id,
+                                      uploadDate:
+                                          validCerts[i].createdAt,
+                                    ));
+                                    if (i < validCerts.length - 1) {
+                                      mobileItems.add(
+                                          const SizedBox(height: 12));
+                                    }
+                                  }
+                                  return Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: mobileItems);
+                                }
+
+                                // Desktop: 3 columnas, filas de 3
+                                final rows = <Widget>[];
+                                for (int i = 0;
+                                    i < validCerts.length;
+                                    i += 3) {
+                                  final slice = validCerts.sublist(
+                                      i,
+                                      min(i + 3, validCerts.length));
+                                  rows.add(_buildDocRow(
+                                    slice
+                                        .map((cert) => Expanded(
+                                              child: _buildDocumentCard(
+                                                context,
+                                                label: cert
+                                                    .entidadCertificadora,
+                                                url: cert.documentoUrl,
+                                                downloadPrefix:
+                                                    'certificacion',
+                                                proveedorId: cert.id,
+                                                uploadDate:
+                                                    cert.createdAt,
+                                              ),
+                                            ))
+                                        .toList(),
+                                  ));
+                                  if (i + 3 < validCerts.length) {
+                                    rows.add(
+                                        const SizedBox(height: 12));
+                                  }
+                                }
+                                return Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: rows);
+                              },
                             );
                           },
                         ),

@@ -158,6 +158,24 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           ),
         ),
         FFRoute(
+          name: DetalleProveedorWidget.routeName,
+          path: DetalleProveedorWidget.routePath,
+          builder: (context, params) => DetalleProveedorWidget(
+            proveedorId: params.getParam(
+              'proveedorId',
+              ParamType.String,
+            ),
+            categoriaid: params.getParam(
+              'categoriaid',
+              ParamType.String,
+            ),
+            categorianombre: params.getParam(
+              'categorianombre',
+              ParamType.String,
+            ),
+          ),
+        ),
+        FFRoute(
           name: RegistroProveedoresWidget.routeName,
           path: RegistroProveedoresWidget.routePath,
           builder: (context, params) => RegistroProveedoresWidget(),

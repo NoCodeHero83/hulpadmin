@@ -1,15 +1,42 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/services.dart';
 import 'flutter_flow/flutter_flow_util.dart';
 
+/// Ambientes disponibles:
+///   Test       → Supabase local (Docker). Automático en kDebugMode sin flag.
+///   Sandbox    → Supabase cloud de staging/QA.
+///   Production → Supabase cloud de producción. Automático en release sin flag.
+///
+/// Cómo seleccionar en Android Studio:
+///   Run > Edit Configurations > Additional run args:
+///     --dart-define=ENVIRONMENT=Test
+///     --dart-define=ENVIRONMENT=Sandbox
+///     --dart-define=ENVIRONMENT=Production
 class FFDevEnvironmentValues {
-  static const String currentEnvironment =
-      String.fromEnvironment('ENVIRONMENT', defaultValue: 'Production');
+  static const String _envFlag =
+      String.fromEnvironment('ENVIRONMENT', defaultValue: '');
 
-  static String get environmentValuesPath =>
-      currentEnvironment == 'Test'
-          ? 'assets/environment_values/environment_test.json'
-          : 'assets/environment_values/environment.json';
+  /// Devuelve 'Test', 'Sandbox' o 'Production'.
+  static String get currentEnvironment {
+    if (_envFlag == 'Test') return 'Test';
+    if (_envFlag == 'Sandbox') return 'Sandbox';
+    if (_envFlag == 'Production') return 'Production';
+    // Sin flag: debug → Test, release → Production
+    return kDebugMode ? 'Test' : 'Production';
+  }
+
+  static String get environmentValuesPath {
+    switch (currentEnvironment) {
+      case 'Sandbox':
+        return 'assets/environment_values/environment_sandbox.json';
+      case 'Production':
+        return 'assets/environment_values/environment.json';
+      case 'Test':
+      default:
+        return 'assets/environment_values/environment_test.json';
+    }
+  }
 
   static final FFDevEnvironmentValues _instance =
       FFDevEnvironmentValues._internal();
@@ -25,24 +52,27 @@ class FFDevEnvironmentValues {
       final String response =
           await rootBundle.loadString(environmentValuesPath);
       final data = await json.decode(response);
-      _privatekey = data['privatekey'];
-      _publickey = data['publickey'];
-      _isProduction = data['isProduction'] ?? true;
-      _supabaseUrl = data['supabaseUrl'];
-      _supabaseAnonKey = data['supabaseAnonKey'];
-      _integrityKey = data['integrityKey'];
+      // Fallbacks defensivos: un JSON al que le falte una clave no debe romper
+      // la carga ni dejar toda la configuración vacía.
+      _privateKey = data['privateKey'] ?? '';
+      _publicKey = data['publicKey'] ?? '';
+      _isProduction = data['isProduction'] ?? false;
+      _supabaseUrl = data['supabaseUrl'] ?? '';
+      _supabaseAnonKey = data['supabaseAnonKey'] ?? '';
+      _integrityKey = data['integrityKey'] ?? '';
+      _n8nWebhookUrl = data['n8nWebhookUrl'] ?? '';
     } catch (e) {
       print('Error loading environment values: $e');
     }
   }
 
-  String _privatekey = '';
-  String get privatekey => _privatekey;
+  String _privateKey = '';
+  String get privateKey => _privateKey;
 
-  String _publickey = '';
-  String get publickey => _publickey;
+  String _publicKey = '';
+  String get publicKey => _publicKey;
 
-  bool _isProduction = true;
+  bool _isProduction = false;
   bool get isProduction => _isProduction;
 
   String _supabaseUrl = '';
@@ -53,4 +83,7 @@ class FFDevEnvironmentValues {
 
   String _integrityKey = '';
   String get integrityKey => _integrityKey;
+
+  String _n8nWebhookUrl = '';
+  String get n8nWebhookUrl => _n8nWebhookUrl;
 }

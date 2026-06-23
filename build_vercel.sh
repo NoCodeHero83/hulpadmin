@@ -1,24 +1,29 @@
 #!/bin/bash
 set -e
 
-# Genera environment.json desde las variables de entorno de Vercel
+IS_PROD="${IS_PRODUCTION:-true}"
+
+echo "Ambiente: $([ "$IS_PROD" = "true" ] && echo 'PRODUCCION' || echo 'SANDBOX')"
+
 cat > assets/environment_values/environment.json << EOF
 {
-  "privatekey": "${WOMPI_PRIVATE_KEY}",
-  "publickey": "${WOMPI_PUBLIC_KEY}",
-  "isProduction": true,
+  "privateKey": "${WOMPI_PRIVATE_KEY}",
+  "publicKey": "${WOMPI_PUBLIC_KEY}",
+  "isProduction": ${IS_PROD},
   "supabaseUrl": "${SUPABASE_URL}",
   "supabaseAnonKey": "${SUPABASE_ANON_KEY}",
-  "integrityKey": "${WOMPI_INTEGRITY_KEY}"
+  "integrityKey": "${WOMPI_INTEGRITY_KEY}",
+  "n8nWebhookUrl": "${N8N_WEBHOOK_URL}"
 }
 EOF
 
-# Instala Flutter si no está disponible
+FLUTTER_VERSION="3.35.0"
+
 if ! command -v flutter &> /dev/null; then
-  git clone https://github.com/flutter/flutter.git -b stable --depth 1 /opt/flutter
+  git clone https://github.com/flutter/flutter.git --depth 1 --branch "$FLUTTER_VERSION" /opt/flutter
   export PATH="$PATH:/opt/flutter/bin"
   flutter precache --web
 fi
 
 flutter pub get
-flutter build web --web-renderer html --release
+flutter build web --release

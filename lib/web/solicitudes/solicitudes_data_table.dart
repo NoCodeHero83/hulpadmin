@@ -67,6 +67,7 @@ class SolicitudesDataTable extends StatelessWidget {
       _col('Estado', headerStyle, fixedWidth: 160.0),
       _col('Fecha y hora', headerStyle),
       _col('Usu. Solicitante', headerStyle),
+      _col('Ciudad', headerStyle),
       _col('Direccion', headerStyle),
       _col('Categoria', headerStyle),
       _col('Precio', headerStyle),
@@ -129,6 +130,11 @@ class SolicitudesDataTable extends StatelessWidget {
             '${item.clienteNombres} ${item.clienteApellidos}',
             'Sin usuario',
           ),
+          style: bodyStyle,
+        )),
+        // Ciudad (REQ-006 v1.0.0)
+        DataCell(Text(
+          valueOrDefault<String>(item.solicitudCiudad, 'Sin ciudad'),
           style: bodyStyle,
         )),
         // Direccion

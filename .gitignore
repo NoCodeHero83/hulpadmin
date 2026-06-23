@@ -1,3 +1,8 @@
+# Dev / spec docs (solo en raíz del proyecto, no en docs/)
+docs/CLAUDE.md
+/REQ-*.md
+/*.SDD*.md
+
 # Miscellaneous
 *.class
 *.log
@@ -10,9 +15,11 @@
 .svn/
 .vercel
 /flutter/
+supabase/
 .env
 .env.local
 .env.production
+.env.sandbox
 
 # IntelliJ related
 *.iml
@@ -36,13 +43,14 @@
 .pub/
 /build/
 
-# Firebase – this is necessary if you use Firebase since it could otherwise 
+# Firebase – this is necessary if you use Firebase since it could otherwise
 # lead to leaking of private certificates to your repository, which is no bueno.
 .firebase/
 
 # Environment / credentials
 assets/environment_values/environment.json
 assets/environment_values/environment_test.json
+assets/environment_values/environment_sandbox.json
 credencialesproduccion.txt
 
 # Web related
@@ -57,5 +65,3 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
-
-.vercel

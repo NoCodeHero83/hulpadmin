@@ -11,12 +11,43 @@ import 'informacion_proveedor_widget.dart' show InformacionProveedorWidget;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+// REQ-002
+import 'package:url_launcher/url_launcher.dart';
+import 'package:http/http.dart' as http;
+import 'package:file_saver/file_saver.dart';
 
 class InformacionProveedorModel
     extends FlutterFlowModel<InformacionProveedorWidget> {
   ///  State fields for stateful widgets in this component.
 
   final formKey = GlobalKey<FormState>();
+
+  // REQ-002: tracks which document is currently downloading (key = downloadPrefix_proveedorId)
+  Map<String, bool> downloadingDocs = {};
+
+  /// Opens [url] in the external browser / native app.
+  Future<void> openDocument(String url) async {
+    final uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      throw Exception('No se pudo abrir el documento');
+    }
+  }
+
+  /// Downloads the file at [url] and saves it locally as [fileName].
+  Future<void> downloadDocument(String url, String fileName) async {
+    final response = await http
+        .get(Uri.parse(url))
+        .timeout(const Duration(seconds: 30));
+    if (response.statusCode != 200) {
+      throw Exception('Error al descargar: ${response.statusCode}');
+    }
+    await FileSaver.instance.saveFile(
+      name: fileName,
+      bytes: response.bodyBytes,
+      mimeType: MimeType.other,
+    );
+  }
+
   // State field(s) for tipoDocumento widget.
   String? tipoDocumentoValue;
   FormFieldController<String>? tipoDocumentoValueController;

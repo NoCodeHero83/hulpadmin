@@ -400,13 +400,22 @@ class _SolicitudesWidgetState extends State<SolicitudesWidget> {
   List<String> _getEstadoOptions(
     List<VwSolicitudesServiciosCompletaRow> allData,
   ) {
+    // REQ-006 v1.1.0: el estado 'entrantes' (etiqueta "Pendientes") SÍ se
+    // ofrece ahora como opción de filtro. Solo se mantiene oculta la variante
+    // cruda heredada 'pendiente' para no duplicar la opción.
+    const ocultosEnFiltro = ['pendiente'];
+    bool esOculto(String? o) =>
+        ocultosEnFiltro.any((x) => _normCompare(o) == _normCompare(x));
+
     var list = allData
         .unique((e) => e.estadoSolicitud!)
         .map((e) => e.estadoSolicitud)
         .withoutNulls
+        .where((o) => !esOculto(o))
         .toList();
     final cur = _trimOrNull(_model.dropDownValue1);
     if (cur != null &&
+        !esOculto(cur) &&
         !list.any((o) => _normCompare(o) == _normCompare(cur))) {
       list = [...list, cur];
     }

@@ -27,4 +27,8 @@ class CertificacionesRow extends SupabaseDataRow {
 
   String get documentoUrl => getField<String>('documento_url')!;
   set documentoUrl(String value) => setField<String>('documento_url', value);
+
+  // REQ-003 v3: fecha de subida del documento
+  DateTime? get createdAt => getField<DateTime>('created_at');
+  set createdAt(DateTime? value) => setField<DateTime>('created_at', value);
 }
