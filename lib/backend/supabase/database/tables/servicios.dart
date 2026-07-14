@@ -1,3 +1,4 @@
+import '/backend/schema/structs/index.dart';
 import '../database.dart';
 
 class ServiciosTable extends SupabaseTable<ServiciosRow> {
@@ -51,4 +52,11 @@ class ServiciosRow extends SupabaseDataRow {
 
   String? get tiempo => getField<String>('tiempo');
   set tiempo(String? value) => setField<String>('tiempo', value);
+
+  List<ItemsReciboStruct> get preciosAdicionales =>
+      getStructList(data['precios_adicionales'], ItemsReciboStruct.fromMap) ??
+      [];
+  set preciosAdicionales(List<ItemsReciboStruct>? value) =>
+      data['precios_adicionales'] =
+          value?.map((e) => e.toMap()).toList();
 }

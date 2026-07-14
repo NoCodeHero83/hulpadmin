@@ -1,4 +1,5 @@
 import '/backend/api_requests/api_calls.dart';
+import '/backend/schema/structs/index.dart';
 import '/backend/supabase/supabase.dart';
 import '/components/dropdown_solicitud_estado_widget.dart';
 import '/flutter_flow/flutter_flow_drop_down.dart';
@@ -56,10 +57,12 @@ class EdicionSolicitudModel extends FlutterFlowModel<EdicionSolicitudWidget> {
   FocusNode? nombreFocusNode7;
   TextEditingController? nombreTextController7;
   String? Function(BuildContext, String?)? nombreTextController7Validator;
-  // State field(s) for precioadic widget.
-  FocusNode? precioadicFocusNode;
-  TextEditingController? precioadicTextController;
-  String? Function(BuildContext, String?)? precioadicTextControllerValidator;
+  List<ItemsReciboStruct> preciosAdicionalesSolicitud = [];
+  void addToPreciosAdicionalesSolicitud(ItemsReciboStruct item) =>
+      preciosAdicionalesSolicitud.add(item);
+  void removeAtIndexFromPreciosAdicionalesSolicitud(int index) =>
+      preciosAdicionalesSolicitud.removeAt(index);
+
   // State field(s) for nombre widget.
   FocusNode? nombreFocusNode8;
   TextEditingController? nombreTextController8;
@@ -124,9 +127,6 @@ class EdicionSolicitudModel extends FlutterFlowModel<EdicionSolicitudWidget> {
 
     nombreFocusNode7?.dispose();
     nombreTextController7?.dispose();
-
-    precioadicFocusNode?.dispose();
-    precioadicTextController?.dispose();
 
     nombreFocusNode8?.dispose();
     nombreTextController8?.dispose();

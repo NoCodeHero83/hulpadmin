@@ -1,3 +1,4 @@
+import '/backend/schema/structs/index.dart';
 import '/backend/supabase/supabase.dart';
 import '/components/notificacion2_widget.dart';
 import '/flutter_flow/flutter_flow_drop_down.dart';
@@ -25,6 +26,16 @@ class CrearServicioModel extends FlutterFlowModel<CrearServicioWidget> {
       items.insert(index, item);
   void updateItemsAtIndex(int index, Function(String) updateFn) =>
       items[index] = updateFn(items[index]);
+
+  List<ItemsReciboStruct> preciosAdicionales = [];
+  void addToPreciosAdicionales(ItemsReciboStruct item) =>
+      preciosAdicionales.add(item);
+  void removeFromPreciosAdicionales(ItemsReciboStruct item) =>
+      preciosAdicionales.remove(item);
+  void removeAtIndexFromPreciosAdicionales(int index) =>
+      preciosAdicionales.removeAt(index);
+  void insertAtIndexInPreciosAdicionales(int index, ItemsReciboStruct item) =>
+      preciosAdicionales.insert(index, item);
 
   String? foto1;
 

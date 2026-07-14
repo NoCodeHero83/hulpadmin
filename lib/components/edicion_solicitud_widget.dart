@@ -1,5 +1,9 @@
 import '/backend/api_requests/api_calls.dart';
+import '/backend/schema/structs/index.dart';
 import '/backend/supabase/supabase.dart';
+import '/components/item_widget.dart';
+import '/components/searchable_dropdown_widget.dart';
+import '/flutter_flow/custom_functions.dart' as functions;
 import '/components/dropdown_solicitud_estado_widget.dart';
 import '/flutter_flow/flutter_flow_drop_down.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -56,8 +60,6 @@ class _EdicionSolicitudWidgetState extends State<EdicionSolicitudWidget> {
     _model.nombreFocusNode6 ??= FocusNode();
 
     _model.nombreFocusNode7 ??= FocusNode();
-
-    _model.precioadicFocusNode ??= FocusNode();
 
     _model.nombreFocusNode8 ??= FocusNode();
 
@@ -2472,209 +2474,6 @@ class _EdicionSolicitudWidgetState extends State<EdicionSolicitudWidget> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            'Precios Adicionales',
-                                            style: FlutterFlowTheme.of(context)
-                                                .bodyMedium
-                                                .override(
-                                                  font: GoogleFonts.inter(
-                                                    fontWeight:
-                                                        FontWeight.normal,
-                                                    fontStyle:
-                                                        FlutterFlowTheme.of(
-                                                                context)
-                                                            .bodyMedium
-                                                            .fontStyle,
-                                                  ),
-                                                  fontSize: 16.0,
-                                                  letterSpacing: 0.0,
-                                                  fontWeight: FontWeight.normal,
-                                                  fontStyle:
-                                                      FlutterFlowTheme.of(
-                                                              context)
-                                                          .bodyMedium
-                                                          .fontStyle,
-                                                ),
-                                          ),
-                                          Container(
-                                            width: MediaQuery.sizeOf(context)
-                                                    .width *
-                                                1.0,
-                                            child: TextFormField(
-                                              controller: _model
-                                                      .precioadicTextController ??=
-                                                  TextEditingController(
-                                                text:
-                                                    columnVwSolicitudesServiciosCompletaRow
-                                                        ?.precioAdicionales
-                                                        ?.toString(),
-                                              ),
-                                              focusNode:
-                                                  _model.precioadicFocusNode,
-                                              autofocus: false,
-                                              obscureText: false,
-                                              decoration: InputDecoration(
-                                                isDense: true,
-                                                labelStyle: FlutterFlowTheme.of(
-                                                        context)
-                                                    .labelMedium
-                                                    .override(
-                                                      font: GoogleFonts.inter(
-                                                        fontWeight:
-                                                            FlutterFlowTheme.of(
-                                                                    context)
-                                                                .labelMedium
-                                                                .fontWeight,
-                                                        fontStyle:
-                                                            FlutterFlowTheme.of(
-                                                                    context)
-                                                                .labelMedium
-                                                                .fontStyle,
-                                                      ),
-                                                      color:
-                                                          FlutterFlowTheme.of(
-                                                                  context)
-                                                              .primaryText,
-                                                      fontSize: 16.0,
-                                                      letterSpacing: 0.0,
-                                                      fontWeight:
-                                                          FlutterFlowTheme.of(
-                                                                  context)
-                                                              .labelMedium
-                                                              .fontWeight,
-                                                      fontStyle:
-                                                          FlutterFlowTheme.of(
-                                                                  context)
-                                                              .labelMedium
-                                                              .fontStyle,
-                                                    ),
-                                                hintText: '0',
-                                                hintStyle: FlutterFlowTheme.of(
-                                                        context)
-                                                    .labelMedium
-                                                    .override(
-                                                      font: GoogleFonts.inter(
-                                                        fontWeight:
-                                                            FlutterFlowTheme.of(
-                                                                    context)
-                                                                .labelMedium
-                                                                .fontWeight,
-                                                        fontStyle:
-                                                            FlutterFlowTheme.of(
-                                                                    context)
-                                                                .labelMedium
-                                                                .fontStyle,
-                                                      ),
-                                                      color: Color(0xFF8A8A8A),
-                                                      fontSize: 16.0,
-                                                      letterSpacing: 0.0,
-                                                      fontWeight:
-                                                          FlutterFlowTheme.of(
-                                                                  context)
-                                                              .labelMedium
-                                                              .fontWeight,
-                                                      fontStyle:
-                                                          FlutterFlowTheme.of(
-                                                                  context)
-                                                              .labelMedium
-                                                              .fontStyle,
-                                                    ),
-                                                enabledBorder:
-                                                    OutlineInputBorder(
-                                                  borderSide: BorderSide(
-                                                    color: FlutterFlowTheme.of(
-                                                            context)
-                                                        .alternate,
-                                                    width: 0.5,
-                                                  ),
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                          8.0),
-                                                ),
-                                                focusedBorder:
-                                                    OutlineInputBorder(
-                                                  borderSide: BorderSide(
-                                                    color: FlutterFlowTheme.of(
-                                                            context)
-                                                        .alternate,
-                                                    width: 0.5,
-                                                  ),
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                          8.0),
-                                                ),
-                                                errorBorder: OutlineInputBorder(
-                                                  borderSide: BorderSide(
-                                                    color: FlutterFlowTheme.of(
-                                                            context)
-                                                        .error,
-                                                    width: 0.5,
-                                                  ),
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                          8.0),
-                                                ),
-                                                focusedErrorBorder:
-                                                    OutlineInputBorder(
-                                                  borderSide: BorderSide(
-                                                    color: FlutterFlowTheme.of(
-                                                            context)
-                                                        .error,
-                                                    width: 0.5,
-                                                  ),
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                          8.0),
-                                                ),
-                                                filled: true,
-                                                fillColor: Color(0xFFFBFAF9),
-                                              ),
-                                              style:
-                                                  FlutterFlowTheme.of(context)
-                                                      .bodyMedium
-                                                      .override(
-                                                        font: GoogleFonts.inter(
-                                                          fontWeight:
-                                                              FlutterFlowTheme.of(
-                                                                      context)
-                                                                  .bodyMedium
-                                                                  .fontWeight,
-                                                          fontStyle:
-                                                              FlutterFlowTheme.of(
-                                                                      context)
-                                                                  .bodyMedium
-                                                                  .fontStyle,
-                                                        ),
-                                                        fontSize: 16.0,
-                                                        letterSpacing: 0.0,
-                                                        fontWeight:
-                                                            FlutterFlowTheme.of(
-                                                                    context)
-                                                                .bodyMedium
-                                                                .fontWeight,
-                                                        fontStyle:
-                                                            FlutterFlowTheme.of(
-                                                                    context)
-                                                                .bodyMedium
-                                                                .fontStyle,
-                                                      ),
-                                              cursorColor:
-                                                  FlutterFlowTheme.of(context)
-                                                      .primaryText,
-                                              validator: _model
-                                                  .precioadicTextControllerValidator
-                                                  .asValidator(context),
-                                            ),
-                                          ),
-                                        ].divide(SizedBox(height: 8.0)),
-                                      ),
-                                    ),
-                                    Flexible(
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.max,
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
                                             'ID Proveedor',
                                             style: FlutterFlowTheme.of(context)
                                                 .bodyMedium
@@ -2876,6 +2675,10 @@ class _EdicionSolicitudWidgetState extends State<EdicionSolicitudWidget> {
                                     ),
                                   ].divide(SizedBox(width: 8.0)),
                                 ),
+                              ),
+                              Padding(
+                                padding: EdgeInsetsDirectional.fromSTEB(0.0, 16.0, 0.0, 0.0),
+                                child: _buildPreciosAdicionalesSection(context),
                               ),
                               Align(
                                 alignment: AlignmentDirectional(-1.0, 0.0),
@@ -3559,81 +3362,17 @@ class _EdicionSolicitudWidgetState extends State<EdicionSolicitudWidget> {
                                                 profesionalNuevoVwProfesionalesServiciosRowList =
                                                 snapshot.data!;
 
-                                            return FlutterFlowDropDown<String>(
-                                              controller: _model
-                                                      .profesionalNuevoValueController ??=
-                                                  FormFieldController<String>(
-                                                _model.profesionalNuevoValue ??=
-                                                    '',
-                                              ),
-                                              options: List<String>.from(
-                                                  profesionalNuevoVwProfesionalesServiciosRowList
-                                                      .map((e) =>
-                                                          e.profesionalId)
-                                                      .withoutNulls
-                                                      .toList()),
-                                              optionLabels:
-                                                  profesionalNuevoVwProfesionalesServiciosRowList
-                                                      .map((e) => e.nombres)
-                                                      .withoutNulls
-                                                      .toList(),
+                                            return SearchableDropdown(
+                                              values: profesionalNuevoVwProfesionalesServiciosRowList
+                                                .map((p) => p.profesionalId ?? '')
+                                                .toList(),
+                                              labels: profesionalNuevoVwProfesionalesServiciosRowList
+                                                .map((p) => p.nombres ?? '')
+                                                .toList(),
+                                              selectedValue: _model.profesionalNuevoValue,
                                               onChanged: (val) => safeSetState(
-                                                  () => _model
-                                                          .profesionalNuevoValue =
-                                                      val),
-                                              width: 200.0,
-                                              height: 40.0,
-                                              textStyle:
-                                                  FlutterFlowTheme.of(context)
-                                                      .bodyMedium
-                                                      .override(
-                                                        font: GoogleFonts.inter(
-                                                          fontWeight:
-                                                              FlutterFlowTheme.of(
-                                                                      context)
-                                                                  .bodyMedium
-                                                                  .fontWeight,
-                                                          fontStyle:
-                                                              FlutterFlowTheme.of(
-                                                                      context)
-                                                                  .bodyMedium
-                                                                  .fontStyle,
-                                                        ),
-                                                        letterSpacing: 0.0,
-                                                        fontWeight:
-                                                            FlutterFlowTheme.of(
-                                                                    context)
-                                                                .bodyMedium
-                                                                .fontWeight,
-                                                        fontStyle:
-                                                            FlutterFlowTheme.of(
-                                                                    context)
-                                                                .bodyMedium
-                                                                .fontStyle,
-                                                      ),
-                                              hintText: 'Proveedor',
-                                              icon: Icon(
-                                                Icons
-                                                    .keyboard_arrow_down_rounded,
-                                                color:
-                                                    FlutterFlowTheme.of(context)
-                                                        .secondaryText,
-                                                size: 24.0,
-                                              ),
-                                              fillColor:
-                                                  FlutterFlowTheme.of(context)
-                                                      .secondaryBackground,
-                                              elevation: 2.0,
-                                              borderColor: Colors.transparent,
-                                              borderWidth: 0.0,
-                                              borderRadius: 8.0,
-                                              margin: EdgeInsetsDirectional
-                                                  .fromSTEB(
-                                                      12.0, 0.0, 12.0, 0.0),
-                                              hidesUnderline: true,
-                                              isOverButton: false,
-                                              isSearchable: false,
-                                              isMultiSelect: false,
+                                                  () => _model.profesionalNuevoValue = val),
+                                              hint: 'Seleccionar profesional...',
                                             );
                                           },
                                         ),
@@ -3975,12 +3714,18 @@ class _EdicionSolicitudWidgetState extends State<EdicionSolicitudWidget> {
                                             _model.profesionalNuevoValue,
                                         'precio_base': double.tryParse(
                                             _model.nombreTextController7.text),
-                                        'precio_adicionales': double.tryParse(
-                                            _model
-                                                .precioadicTextController.text),
+                                        'precio_adicionales': _model
+                                            .preciosAdicionalesSolicitud
+                                            .fold(0.0, (s, e) => s + e.total),
                                         'informacion_adicional':
                                             _model.nombreTextController12.text,
-                                        'estado': 'aceptadas',
+                                        // Solo regresar a 'aceptadas' si la solicitud
+                                        // aún está en 'entrantes'; no pisar estados
+                                        // ya avanzados (en proceso, en camino, etc.).
+                                        if (columnVwSolicitudesServiciosCompletaRow
+                                                ?.estadoSolicitud ==
+                                            'entrantes')
+                                          'estado': 'aceptadas',
                                       },
                                       matchingRows: (rows) => rows.eqOrNull(
                                         'id',
@@ -4022,9 +3767,9 @@ class _EdicionSolicitudWidgetState extends State<EdicionSolicitudWidget> {
                                                 ?.hora?.time)),
                                         'precio_base': double.tryParse(
                                             _model.nombreTextController7.text),
-                                        'precio_adicionales': double.tryParse(
-                                            _model
-                                                .precioadicTextController.text),
+                                        'precio_adicionales': _model
+                                            .preciosAdicionalesSolicitud
+                                            .fold(0.0, (s, e) => s + e.total),
                                         'informacion_adicional':
                                             _model.nombreTextController12.text,
                                       },
@@ -4084,6 +3829,191 @@ class _EdicionSolicitudWidgetState extends State<EdicionSolicitudWidget> {
           ),
         ),
       ),
+    );
+  }
+
+  InputDecoration _fieldDecoration(BuildContext context, String hint) {
+    return InputDecoration(
+      isDense: true,
+      hintText: hint,
+      hintStyle: FlutterFlowTheme.of(context).bodyMedium.override(
+        font: GoogleFonts.inter(),
+        color: Color(0xFF8A8A8A),
+        fontSize: 16.0,
+        letterSpacing: 0.0,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: FlutterFlowTheme.of(context).alternate, width: 0.5),
+        borderRadius: BorderRadius.circular(8.0),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: FlutterFlowTheme.of(context).primary, width: 1.0),
+        borderRadius: BorderRadius.circular(8.0),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: FlutterFlowTheme.of(context).error, width: 0.5),
+        borderRadius: BorderRadius.circular(8.0),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: FlutterFlowTheme.of(context).error, width: 0.5),
+        borderRadius: BorderRadius.circular(8.0),
+      ),
+      filled: true,
+      fillColor: Color(0xFFFBFAF9),
+      contentPadding: EdgeInsetsDirectional.fromSTEB(12.0, 14.0, 12.0, 14.0),
+    );
+  }
+
+  Widget _buildPreciosAdicionalesSection(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Precios Adicionales',
+          style: FlutterFlowTheme.of(context).bodyMedium.override(
+                font: GoogleFonts.inter(
+                  fontWeight: FontWeight.normal,
+                  fontStyle:
+                      FlutterFlowTheme.of(context).bodyMedium.fontStyle,
+                ),
+                fontSize: 16.0,
+                letterSpacing: 0.0,
+                fontWeight: FontWeight.normal,
+                fontStyle:
+                    FlutterFlowTheme.of(context).bodyMedium.fontStyle,
+              ),
+        ),
+        SizedBox(height: 8.0),
+        FFButtonWidget(
+          onPressed: () async {
+            await showDialog(
+              context: context,
+              builder: (dialogContext) {
+                return Dialog(
+                  elevation: 0,
+                  insetPadding: EdgeInsets.symmetric(
+                      horizontal: 40.0, vertical: 24.0),
+                  backgroundColor: Colors.transparent,
+                  alignment: AlignmentDirectional(0.0, 0.0)
+                      .resolve(Directionality.of(context)),
+                  child: ItemWidget(
+                    action: (item) async {
+                      safeSetState(() {
+                        _model.addToPreciosAdicionalesSolicitud(item);
+                      });
+                    },
+                  ),
+                );
+              },
+            );
+          },
+          text: 'Agregar ítem',
+          icon: Icon(Icons.add, size: 16.0),
+          options: FFButtonOptions(
+            height: 36.0,
+            padding: EdgeInsetsDirectional.fromSTEB(12.0, 0.0, 12.0, 0.0),
+            color: FlutterFlowTheme.of(context).primary,
+            textStyle: FlutterFlowTheme.of(context).titleSmall.override(
+                  font: GoogleFonts.inter(),
+                  color: Colors.white,
+                  fontSize: 14.0,
+                  letterSpacing: 0.0,
+                ),
+            borderRadius: BorderRadius.circular(8.0),
+          ),
+        ),
+        if (_model.preciosAdicionalesSolicitud.isNotEmpty) ...[
+          SizedBox(height: 8.0),
+          ...List.generate(_model.preciosAdicionalesSolicitud.length, (index) {
+            final item = _model.preciosAdicionalesSolicitud[index];
+            return Padding(
+              padding: EdgeInsetsDirectional.fromSTEB(0.0, 4.0, 0.0, 4.0),
+              child: Row(
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  Container(
+                    padding:
+                        EdgeInsetsDirectional.fromSTEB(8.0, 4.0, 8.0, 4.0),
+                    decoration: BoxDecoration(
+                      color: FlutterFlowTheme.of(context).primary,
+                      borderRadius: BorderRadius.circular(6.0),
+                    ),
+                    child: Text(
+                      item.tipoItem ?? '',
+                      style:
+                          FlutterFlowTheme.of(context).bodySmall.override(
+                                font: GoogleFonts.inter(),
+                                color: Colors.white,
+                                fontSize: 12.0,
+                                letterSpacing: 0.0,
+                              ),
+                    ),
+                  ),
+                  SizedBox(width: 8.0),
+                  Expanded(
+                    child: Text(
+                      item.descripcion ?? '',
+                      style: FlutterFlowTheme.of(context).bodyMedium.override(
+                            font: GoogleFonts.inter(),
+                            fontSize: 14.0,
+                            letterSpacing: 0.0,
+                          ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  SizedBox(width: 8.0),
+                  Text(
+                    '\$${functions.formatPrices(item.total)}',
+                    style: FlutterFlowTheme.of(context).bodyMedium.override(
+                          font: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                          color: FlutterFlowTheme.of(context).primary,
+                          fontSize: 14.0,
+                          letterSpacing: 0.0,
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close,
+                        color: FlutterFlowTheme.of(context).error, size: 18.0),
+                    onPressed: () {
+                      safeSetState(() {
+                        _model.removeAtIndexFromPreciosAdicionalesSolicitud(
+                            index);
+                      });
+                    },
+                  ),
+                ],
+              ),
+            );
+          }),
+          Divider(thickness: 0.5),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Total adicionales:',
+                style: FlutterFlowTheme.of(context).bodyMedium.override(
+                      font: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                      fontSize: 14.0,
+                      letterSpacing: 0.0,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+              Text(
+                '\$${functions.formatPrices(_model.preciosAdicionalesSolicitud.fold(0.0, (s, e) => s + e.total))}',
+                style: FlutterFlowTheme.of(context).bodyMedium.override(
+                      font: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                      color: FlutterFlowTheme.of(context).primary,
+                      fontSize: 14.0,
+                      letterSpacing: 0.0,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ],
+          ),
+        ],
+      ],
     );
   }
 }

@@ -46,3 +46,4 @@ export 'tables/usuarios_externos.dart';
 export 'tables/subcategorias.dart';
 export 'tables/user_notifications.dart';
 export 'tables/vw_resumen_subcategorias.dart';
+export 'tables/ciudades.dart';

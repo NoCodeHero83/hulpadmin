@@ -178,7 +178,6 @@ class _FinalizarServicio2WidgetState extends State<FinalizarServicio2Widget> {
                     onPressed: () async {
                       var _shouldSetState = false;
                       try {
-                      print('[FINALIZAR] Click en finalizar. servicioId=${widget!.servicioId}');
                       _model.validacion =
                           await SolicitudesServicioTable().queryRows(
                         queryFn: (q) => q.eqOrNull(
@@ -186,12 +185,10 @@ class _FinalizarServicio2WidgetState extends State<FinalizarServicio2Widget> {
                           widget!.servicioId,
                         ),
                       );
-                      print('[FINALIZAR] validacion rows=${_model.validacion?.length} profesionalId=${_model.validacion?.firstOrNull?.profesionalId} usuarioId=${_model.validacion?.firstOrNull?.usuarioId} precio=${_model.validacion?.firstOrNull?.precio}');
                       _shouldSetState = true;
                       if (_model.validacion?.firstOrNull?.profesionalId ==
                               null ||
                           _model.validacion?.firstOrNull?.profesionalId == '') {
-                        print('[FINALIZAR] Servicio sin profesional asignado. servicioId=${widget!.servicioId}');
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text('No se puede finalizar: el servicio no tiene profesional asignado.'),
@@ -244,7 +241,6 @@ class _FinalizarServicio2WidgetState extends State<FinalizarServicio2Widget> {
                             _model.aceptaceToken2,
                             r'''$.success''',
                           )) {
-                            print('[FINALIZAR][METODO_PAGO] paymentSourceId=${_model.resultadosUsuarioMetodoPago!.firstOrNull!.paymentSourceId} precio=${_model.validacion!.firstOrNull!.precio} email=${_model.usuarioServicio2!.firstOrNull!.correoElectronico}');
                             _model.pago2 = await actions.createTransaction(
                               FFDevEnvironmentValues().privateKey,
                               FFDevEnvironmentValues().publicKey,
@@ -257,17 +253,30 @@ class _FinalizarServicio2WidgetState extends State<FinalizarServicio2Widget> {
                                 _model.aceptaceToken2,
                                 r'''$.acceptanceToken''',
                               ).toString(),
-                              (_model.validacion!.firstOrNull!.precio * 100)
+                              ((valueOrDefault<double>(
+                                            _model.validacion?.firstOrNull
+                                                ?.precioBase,
+                                            valueOrDefault<double>(
+                                              _model.validacion?.firstOrNull
+                                                  ?.precio,
+                                              0.0,
+                                            ),
+                                          ) +
+                                          valueOrDefault<double>(
+                                            _model.validacion?.firstOrNull
+                                                ?.precioAdicionales,
+                                            0.0,
+                                          )) *
+                                      100)
                                   .round(),
                               'COP',
                               _model.usuarioServicio2!.firstOrNull!
                                   .correoElectronico!,
-                              _model.validacion!.firstOrNull!.id,
+                              '${_model.validacion!.firstOrNull!.id}-${DateTime.now().millisecondsSinceEpoch}',
                               FFDevEnvironmentValues().integrityKey,
-                              true,
+                              FFDevEnvironmentValues().isProduction,
                             );
                             _shouldSetState = true;
-                            print('[FINALIZAR][WOMPI_RESP_METODO] ${_model.pago2}');
                             if (getJsonField(
                               _model.pago2,
                               r'''$.success''',
@@ -280,7 +289,7 @@ class _FinalizarServicio2WidgetState extends State<FinalizarServicio2Widget> {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(
-                                      'finalizado',
+                                      '¡Servicio finalizado y pago aprobado!',
                                       style: TextStyle(
                                         color: FlutterFlowTheme.of(context)
                                             .primaryBackground,
@@ -303,51 +312,43 @@ class _FinalizarServicio2WidgetState extends State<FinalizarServicio2Widget> {
                                     widget!.servicioId,
                                   ),
                                 );
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'finalizado 2',
-                                      style: TextStyle(
-                                        color: FlutterFlowTheme.of(context)
-                                            .primaryBackground,
-                                      ),
-                                    ),
-                                    duration: Duration(milliseconds: 2000),
-                                    backgroundColor:
-                                        FlutterFlowTheme.of(context).primary,
-                                  ),
-                                );
                                 await TransaccionesTable().insert({
                                   'solicitud_id':
                                       _model.validacion?.firstOrNull?.id,
                                   'usuario_id':
                                       _model.usuarioServicio2?.firstOrNull?.id,
                                   'monto': valueOrDefault<double>(
-                                    _model.validacion?.firstOrNull?.precio,
-                                    0.0,
-                                  ),
+                                        _model.validacion?.firstOrNull
+                                            ?.precioBase,
+                                        valueOrDefault<double>(
+                                          _model.validacion?.firstOrNull?.precio,
+                                          0.0,
+                                        ),
+                                      ) +
+                                      valueOrDefault<double>(
+                                        _model.validacion?.firstOrNull
+                                            ?.precioAdicionales,
+                                        0.0,
+                                      ),
                                   'moneda': 'COP',
                                   'proveedor_pago': 'WOMPI',
                                   'fecha_pago': supaSerialize<DateTime>(
                                       getCurrentTimestamp),
                                   'fecha_registro': supaSerialize<DateTime>(
                                       getCurrentTimestamp),
-                                  'metodo_pago': 'Bancolombia',
+                                  'metodo_pago':
+                                      _model.resultadosUsuarioMetodoPago
+                                              ?.firstOrNull?.tipo ??
+                                          'Bancolombia',
+                                  'numero_transaccion': getJsonField(
+                                    _model.pago2,
+                                    r'''$.transactionId''',
+                                  )?.toString(),
+                                  'referencia_externa': getJsonField(
+                                    _model.pago2,
+                                    r'''$.reference''',
+                                  )?.toString(),
                                 });
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'finalizado 3',
-                                      style: TextStyle(
-                                        color: FlutterFlowTheme.of(context)
-                                            .primaryBackground,
-                                      ),
-                                    ),
-                                    duration: Duration(milliseconds: 2000),
-                                    backgroundColor:
-                                        FlutterFlowTheme.of(context).primary,
-                                  ),
-                                );
                                 Navigator.pop(context);
                                 if (_shouldSetState) safeSetState(() {});
                                 return;
@@ -475,7 +476,6 @@ class _FinalizarServicio2WidgetState extends State<FinalizarServicio2Widget> {
                           );
                           _shouldSetState = true;
                           if (_model.tarjeta == null || _model.tarjeta!.isEmpty) {
-                            print('[FINALIZAR] Usuario sin metodo de pago ni tarjetas guardadas. usuario_id=${_model.validacion?.firstOrNull?.usuarioId} servicioId=${widget!.servicioId}');
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text('El usuario no tiene método de pago ni tarjeta guardada.'),
@@ -504,7 +504,6 @@ class _FinalizarServicio2WidgetState extends State<FinalizarServicio2Widget> {
                             _model.aceptaceToken,
                             r'''$.success''',
                           )) {
-                            print('[FINALIZAR][TARJETA] paymentSourceId=${_model.tarjeta!.firstOrNull!.paymentSourceId} precio=${_model.validacion!.firstOrNull!.precio} email=${_model.usuarioServicio!.firstOrNull!.correoElectronico}');
                             _model.pago = await actions.createTransaction(
                               FFDevEnvironmentValues().privateKey,
                               FFDevEnvironmentValues().publicKey,
@@ -514,17 +513,30 @@ class _FinalizarServicio2WidgetState extends State<FinalizarServicio2Widget> {
                                 _model.aceptaceToken,
                                 r'''$.acceptanceToken''',
                               ).toString(),
-                              (_model.validacion!.firstOrNull!.precio * 100)
+                              ((valueOrDefault<double>(
+                                            _model.validacion?.firstOrNull
+                                                ?.precioBase,
+                                            valueOrDefault<double>(
+                                              _model.validacion?.firstOrNull
+                                                  ?.precio,
+                                              0.0,
+                                            ),
+                                          ) +
+                                          valueOrDefault<double>(
+                                            _model.validacion?.firstOrNull
+                                                ?.precioAdicionales,
+                                            0.0,
+                                          )) *
+                                      100)
                                   .round(),
                               'COP',
                               _model.usuarioServicio!.firstOrNull!
                                   .correoElectronico!,
-                              _model.validacion!.firstOrNull!.id,
+                              '${_model.validacion!.firstOrNull!.id}-${DateTime.now().millisecondsSinceEpoch}',
                               FFDevEnvironmentValues().integrityKey,
-                              true,
+                              FFDevEnvironmentValues().isProduction,
                             );
                             _shouldSetState = true;
-                            print('[FINALIZAR][WOMPI_RESP_TARJETA] ${_model.pago}');
                             if (getJsonField(
                               _model.pago,
                               r'''$.success''',
@@ -537,7 +549,7 @@ class _FinalizarServicio2WidgetState extends State<FinalizarServicio2Widget> {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(
-                                      'finalizado',
+                                      '¡Servicio finalizado y pago aprobado!',
                                       style: TextStyle(
                                         color: FlutterFlowTheme.of(context)
                                             .primaryBackground,
@@ -560,29 +572,24 @@ class _FinalizarServicio2WidgetState extends State<FinalizarServicio2Widget> {
                                     widget!.servicioId,
                                   ),
                                 );
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'finalizado 2',
-                                      style: TextStyle(
-                                        color: FlutterFlowTheme.of(context)
-                                            .primaryBackground,
-                                      ),
-                                    ),
-                                    duration: Duration(milliseconds: 2000),
-                                    backgroundColor:
-                                        FlutterFlowTheme.of(context).primary,
-                                  ),
-                                );
                                 await TransaccionesTable().insert({
                                   'solicitud_id':
                                       _model.validacion?.firstOrNull?.id,
                                   'usuario_id':
                                       _model.usuarioServicio?.firstOrNull?.id,
                                   'monto': valueOrDefault<double>(
-                                    _model.validacion?.firstOrNull?.precio,
-                                    0.0,
-                                  ),
+                                        _model.validacion?.firstOrNull
+                                            ?.precioBase,
+                                        valueOrDefault<double>(
+                                          _model.validacion?.firstOrNull?.precio,
+                                          0.0,
+                                        ),
+                                      ) +
+                                      valueOrDefault<double>(
+                                        _model.validacion?.firstOrNull
+                                            ?.precioAdicionales,
+                                        0.0,
+                                      ),
                                   'moneda': 'COP',
                                   'proveedor_pago': 'WOMPI',
                                   'fecha_pago': supaSerialize<DateTime>(
@@ -590,21 +597,15 @@ class _FinalizarServicio2WidgetState extends State<FinalizarServicio2Widget> {
                                   'fecha_registro': supaSerialize<DateTime>(
                                       getCurrentTimestamp),
                                   'metodo_pago': 'Tarjeta',
+                                  'numero_transaccion': getJsonField(
+                                    _model.pago,
+                                    r'''$.transactionId''',
+                                  )?.toString(),
+                                  'referencia_externa': getJsonField(
+                                    _model.pago,
+                                    r'''$.reference''',
+                                  )?.toString(),
                                 });
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'finalizado 3',
-                                      style: TextStyle(
-                                        color: FlutterFlowTheme.of(context)
-                                            .primaryBackground,
-                                      ),
-                                    ),
-                                    duration: Duration(milliseconds: 2000),
-                                    backgroundColor:
-                                        FlutterFlowTheme.of(context).primary,
-                                  ),
-                                );
                                 Navigator.pop(context);
                                 if (_shouldSetState) safeSetState(() {});
                                 return;
@@ -726,9 +727,7 @@ class _FinalizarServicio2WidgetState extends State<FinalizarServicio2Widget> {
                       }
 
                       if (_shouldSetState) safeSetState(() {});
-                      } catch (e, st) {
-                        print('[FINALIZAR][EXCEPTION] $e');
-                        print('[FINALIZAR][STACK] $st');
+                      } catch (e) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text('Error al finalizar: $e'),

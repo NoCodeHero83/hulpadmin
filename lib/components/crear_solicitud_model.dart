@@ -1,4 +1,5 @@
 import '/auth/supabase_auth/auth_util.dart';
+import '/backend/schema/structs/index.dart';
 import '/backend/supabase/supabase.dart';
 import '/flutter_flow/flutter_flow_drop_down.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -66,13 +67,16 @@ class CrearSolicitudModel extends FlutterFlowModel<CrearSolicitudWidget> {
   FocusNode? preciobaseFocusNode;
   TextEditingController? preciobaseTextController;
   String? Function(BuildContext, String?)? preciobaseTextControllerValidator;
-  // State field(s) for precAdic widget.
-  FocusNode? precAdicFocusNode;
-  TextEditingController? precAdicTextController;
-  String? Function(BuildContext, String?)? precAdicTextControllerValidator;
+  List<ItemsReciboStruct> preciosAdicionalesSolicitud = [];
+  void addToPreciosAdicionalesSolicitud(ItemsReciboStruct item) =>
+      preciosAdicionalesSolicitud.add(item);
+  void removeAtIndexFromPreciosAdicionalesSolicitud(int index) =>
+      preciosAdicionalesSolicitud.removeAt(index);
   // State field(s) for servicioSelecc widget.
   String? servicioSeleccValue;
   FormFieldController<String>? servicioSeleccValueController;
+  // State field(s) for ciudadSelecc widget.
+  String? ciudadSeleccValue;
   // Stores action output result for [Backend Call - Query Rows] action in servicioSelecc widget.
   List<ServiciosRow>? precioss;
   DateTime? datePicked;
@@ -99,8 +103,6 @@ class CrearSolicitudModel extends FlutterFlowModel<CrearSolicitudWidget> {
     preciobaseFocusNode?.dispose();
     preciobaseTextController?.dispose();
 
-    precAdicFocusNode?.dispose();
-    precAdicTextController?.dispose();
 
     notasFocusNode?.dispose();
     notasTextController?.dispose();

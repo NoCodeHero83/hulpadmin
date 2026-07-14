@@ -143,7 +143,7 @@ class _SolicitudesWidgetState extends State<SolicitudesWidget> {
       }).toList();
     }
 
-    final desc = _model.dropDownOrdenValue == 'Recientes primero';
+    final desc = _model.dropDownOrdenValue != 'Antiguos primero';
     final withFecha = list.where((e) => e.fecha != null).toList();
     final sinFecha = list.where((e) => e.fecha == null).toList();
     final sorted =

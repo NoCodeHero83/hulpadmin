@@ -91,4 +91,7 @@ class SolicitudesServicioRow extends SupabaseDataRow {
 
   String? get tipo => getField<String>('tipo');
   set tipo(String? value) => setField<String>('tipo', value);
+
+  String? get ciudadId => getField<String>('ciudad_id');
+  set ciudadId(String? value) => setField<String>('ciudad_id', value);
 }

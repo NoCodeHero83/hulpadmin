@@ -166,3 +166,8 @@ String generateUUIDv4() {
 
   return '${h.substring(0, 8)}-${h.substring(8, 12)}-4${h.substring(13, 16)}-8${h.substring(17, 20)}-${h.substring(20, 32)}';
 }
+
+String formatPrices(double valor) {
+  final NumberFormat formatter = NumberFormat('#,##0.00', 'en_US');
+  return formatter.format(valor);
+}

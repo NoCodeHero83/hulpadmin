@@ -54,8 +54,8 @@ class FFDevEnvironmentValues {
       final data = await json.decode(response);
       // Fallbacks defensivos: un JSON al que le falte una clave no debe romper
       // la carga ni dejar toda la configuración vacía.
-      _privateKey = data['privateKey'] ?? '';
-      _publicKey = data['publicKey'] ?? '';
+      _privateKey = data['privateKey'] ?? data['privatekey'] ?? '';
+      _publicKey = data['publicKey'] ?? data['publickey'] ?? '';
       _isProduction = data['isProduction'] ?? false;
       _supabaseUrl = data['supabaseUrl'] ?? '';
       _supabaseAnonKey = data['supabaseAnonKey'] ?? '';
