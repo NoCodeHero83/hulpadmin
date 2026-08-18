@@ -1,3 +1,4 @@
+import '/backend/supabase/storage/storage.dart';
 import '/backend/supabase/supabase.dart';
 import '/flutter_flow/flutter_flow_drop_down.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -107,6 +108,25 @@ class _InformacionProveedorWidgetState
   Widget _buildEmptyColumn() => const Expanded(child: SizedBox());
 
   /// REQ-003: builds a row of up to 3 document cards with spacing.
+  // Cedulas, cuentas bancarias y contratos viven en un bucket privado y se
+  // guardan como RUTA, no como URL: hay que firmarlas para poder verlas. Los
+  // valores que siguen siendo http se devuelven tal cual.
+  final Map<String, String> _urlsFirmadas = {};
+
+  Future<String?> _resolverUrl(String? valor) async {
+    if (valor == null || valor.isEmpty) return null;
+    if (!isPrivateStoragePath(valor)) return valor;
+    final enCache = _urlsFirmadas[valor];
+    if (enCache != null) return enCache;
+    try {
+      final firmada = await signedUrlForPrivatePath(valor);
+      _urlsFirmadas[valor] = firmada;
+      return firmada;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Empty slots at the end are filled with invisible Expanded spacers.
   Widget _buildDocRow(List<Widget> expandedCards) {
     assert(expandedCards.length <= 3);
@@ -169,12 +189,24 @@ class _InformacionProveedorWidgetState
             child: SizedBox(
               height: 120,
               width: double.infinity,
-              child: hasUrl && _isImageUrl(url!)
-                  ? Image.network(url, fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _pdfPlaceholder())
-                  : hasUrl
+              child: !hasUrl
+                  ? _emptyPlaceholder(context)
+                  : !_isImageUrl(url)
                       ? _pdfPlaceholder()
-                      : _emptyPlaceholder(context),
+                      : FutureBuilder<String?>(
+                          future: _resolverUrl(url),
+                          builder: (context, snap) {
+                            if (snap.connectionState != ConnectionState.done) {
+                              return _emptyPlaceholder(context);
+                            }
+                            final resuelta = snap.data;
+                            if (resuelta == null) return _pdfPlaceholder();
+                            return Image.network(resuelta,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) =>
+                                    _pdfPlaceholder());
+                          },
+                        ),
             ),
           ),
           const SizedBox(height: 8),
@@ -249,7 +281,11 @@ class _InformacionProveedorWidgetState
                 ),
                 onPressed: () async {
                   try {
-                    await _model.openDocument(url!);
+                    final resuelta = await _resolverUrl(url);
+                    if (resuelta == null) {
+                      throw 'No se pudo acceder al documento';
+                    }
+                    await _model.openDocument(resuelta);
                   } catch (_) {
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -293,7 +329,11 @@ class _InformacionProveedorWidgetState
                         safeSetState(
                             () => _model.downloadingDocs[docKey] = true);
                         try {
-                          await _model.downloadDocument(url!, fileName);
+                          final resuelta = await _resolverUrl(url);
+                          if (resuelta == null) {
+                            throw 'No se pudo acceder al documento';
+                          }
+                          await _model.downloadDocument(resuelta, fileName);
                         } catch (e) {
                           if (mounted) {
                             final msg = e.toString().toLowerCase().contains('timeout')

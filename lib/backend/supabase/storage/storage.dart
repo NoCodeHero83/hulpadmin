@@ -53,3 +53,44 @@ extension _SupabaseBucketExtensions on SupabaseStorageClient {
     return fullStoragePath;
   }
 }
+
+/// Bucket privado para documentos de identidad y bancarios. A diferencia del
+/// resto, aqui NO se guarda una URL publica: se guarda la RUTA, y el acceso se
+/// concede firmandola en el momento de mostrarla. Una URL publica de estos
+/// documentos seria legible por cualquiera que la tuviera, y los nombres son
+/// marcas de tiempo, o sea enumerables.
+const kBucketDocumentosPrivados = 'documentos-privados';
+
+/// Sube al bucket privado y devuelve la ruta dentro del bucket.
+Future<String> uploadSupabaseStoragePrivateFile({
+  required SelectedFile selectedFile,
+  String bucketName = kBucketDocumentosPrivados,
+}) async {
+  await SupaFlow.client.storage.from(bucketName).uploadBinary(
+        selectedFile.storagePath,
+        selectedFile.bytes,
+        fileOptions: FileOptions(contentType: null, upsert: true),
+      );
+  return selectedFile.storagePath;
+}
+
+/// Firma una ruta del bucket privado. [segundos] es la validez del enlace.
+Future<String> signedUrlForPrivatePath(
+  String path, {
+  int segundos = 3600,
+  String bucketName = kBucketDocumentosPrivados,
+}) =>
+    SupaFlow.client.storage.from(bucketName).createSignedUrl(path, segundos);
+
+/// True si el valor guardado es una ruta privada y no una URL publica.
+/// Los registros antiguos y las certificaciones siguen siendo URLs http.
+bool isPrivateStoragePath(String? valor) =>
+    valor != null && valor.isNotEmpty && !valor.startsWith('http');
+
+Future<void> deleteSupabasePrivateFile(
+  String path, {
+  String bucketName = kBucketDocumentosPrivados,
+}) async {
+  if (path.isEmpty) return;
+  await SupaFlow.client.storage.from(bucketName).remove([path]);
+}

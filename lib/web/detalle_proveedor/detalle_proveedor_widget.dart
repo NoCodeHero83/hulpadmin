@@ -83,6 +83,29 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
     return ['jpg', 'jpeg', 'png', 'webp'].contains(ext);
   }
 
+  // ── Documentos privados ──────────────────────────────────────────────────
+  // Cedulas, cuentas bancarias y contratos viven en el bucket privado
+  // 'documentos-privados' y se guardan como RUTA, no como URL. Se firman al
+  // vuelo y el enlace caduca. Los valores que siguen siendo http (las
+  // certificaciones y los registros anteriores a la migracion) se devuelven
+  // tal cual, asi que ambos formatos conviven sin ramas en el resto del codigo.
+  final Map<String, String> _urlsFirmadas = {};
+
+  Future<String?> _resolverUrl(String? valor) async {
+    if (valor == null || valor.isEmpty) return null;
+    if (!isPrivateStoragePath(valor)) return valor;
+    final enCache = _urlsFirmadas[valor];
+    if (enCache != null) return enCache;
+    try {
+      final firmada = await signedUrlForPrivatePath(valor);
+      _urlsFirmadas[valor] = firmada;
+      return firmada;
+    } catch (_) {
+      // Sin permiso o ruta inexistente: se trata como documento ausente.
+      return null;
+    }
+  }
+
   Widget _pdfPlaceholder() => Container(
         color: const Color(0xFFEAEAEA),
         child: const Center(
@@ -157,12 +180,25 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
             child: SizedBox(
               height: 120,
               width: double.infinity,
-              child: hasUrl && _isImageUrl(url!)
-                  ? Image.network(url, fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _pdfPlaceholder())
-                  : hasUrl
+              child: !hasUrl
+                  ? _emptyPlaceholder(context)
+                  : !_isImageUrl(url)
                       ? _pdfPlaceholder()
-                      : _emptyPlaceholder(context),
+                      : FutureBuilder<String?>(
+                          future: _resolverUrl(url),
+                          builder: (context, snap) {
+                            if (snap.connectionState !=
+                                ConnectionState.done) {
+                              return _emptyPlaceholder(context);
+                            }
+                            final resuelta = snap.data;
+                            if (resuelta == null) return _pdfPlaceholder();
+                            return Image.network(resuelta,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) =>
+                                    _pdfPlaceholder());
+                          },
+                        ),
             ),
           ),
           const SizedBox(height: 8),
@@ -231,7 +267,13 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
                 ),
                 onPressed: () async {
                   try {
-                    await _model.openDocument(url!);
+                    // Con el bucket privado la ruta no se puede abrir
+                    // directamente: hay que firmarla antes.
+                    final resuelta = await _resolverUrl(url);
+                    if (resuelta == null) {
+                      throw 'No se pudo acceder al documento';
+                    }
+                    await _model.openDocument(resuelta);
                   } catch (_) {
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -273,7 +315,11 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
                         safeSetState(
                             () => _model.downloadingDocs[docKey] = true);
                         try {
-                          await _model.downloadDocument(url!, fileName);
+                          final resuelta = await _resolverUrl(url);
+                          if (resuelta == null) {
+                            throw 'No se pudo acceder al documento';
+                          }
+                          await _model.downloadDocument(resuelta, fileName);
                         } catch (e) {
                           if (mounted) {
                             final msg = e
@@ -1313,19 +1359,38 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
       barrierDismissible: false,
       builder: (ctx) {
         return StatefulBuilder(builder: (ctx, setLocal) {
-          Future<List<String>> subirConProgreso(List<SelectedFile> files) async {
+          // privado=true devuelve RUTAS del bucket privado; false, URLs
+          // publicas. Los documentos de identidad y bancarios van por el
+          // primer camino; las certificaciones siguen siendo publicas.
+          Future<List<String>> subirConProgreso(List<SelectedFile> files,
+              {bool privado = false}) async {
             final urls = <String>[];
             for (var i = 0; i < files.length; i++) {
               setLocal(() {
                 progreso = i / files.length;
                 progresoTexto = 'Subiendo ${i + 1} de ${files.length}';
               });
-              final url = await uploadSupabaseStorageFile(
-                  bucketName: 'archivos', selectedFile: files[i]);
+              final url = privado
+                  ? await uploadSupabaseStoragePrivateFile(
+                      selectedFile: files[i])
+                  : await uploadSupabaseStorageFile(
+                      bucketName: 'archivos', selectedFile: files[i]);
               urls.add(url);
               setLocal(() => progreso = (i + 1) / files.length);
             }
             return urls;
+          }
+
+          // Borra el archivo anterior en el bucket que corresponda.
+          Future<void> borrarAnterior(String? actual) async {
+            if (actual == null || actual.isEmpty) return;
+            try {
+              if (isPrivateStoragePath(actual)) {
+                await deleteSupabasePrivateFile(actual);
+              } else {
+                await deleteSupabaseFileFromPublicUrl(actual);
+              }
+            } catch (_) {}
           }
 
           Future<void> subirRegistro(String campo, String folder,
@@ -1341,18 +1406,14 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
               progresoTexto = 'Subiendo...';
             });
             try {
-              final urls = await subirConProgreso(files);
+              final urls = await subirConProgreso(files, privado: true);
               if (urls.isNotEmpty) {
                 await UsuariosTable().update(
                   data: {campo: urls.first},
                   matchingRows: (r) => r.eqOrNull('id', widget.proveedorId),
                 );
-                if (actual != null &&
-                    actual.isNotEmpty &&
-                    actual != urls.first) {
-                  try {
-                    await deleteSupabaseFileFromPublicUrl(actual);
-                  } catch (_) {}
+                if (actual != urls.first) {
+                  await borrarAnterior(actual);
                 }
                 cambios = true;
                 setLocal(() => set(urls.first));
@@ -1378,11 +1439,7 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
                 data: {campo: null},
                 matchingRows: (r) => r.eqOrNull('id', widget.proveedorId),
               );
-              if (actual != null && actual.isNotEmpty) {
-                try {
-                  await deleteSupabaseFileFromPublicUrl(actual);
-                } catch (_) {}
-              }
+              await borrarAnterior(actual);
               cambios = true;
               setLocal(() => set(null));
             });
