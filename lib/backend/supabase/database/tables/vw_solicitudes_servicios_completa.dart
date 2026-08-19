@@ -233,4 +233,12 @@ class VwSolicitudesServiciosCompletaRow extends SupabaseDataRow {
   String? get solicitudCiudad => getField<String>('solicitud_ciudad');
   set solicitudCiudad(String? value) =>
       setField<String>('solicitud_ciudad', value);
+
+  // Punto exacto de la solicitud. Nulo en todo lo creado antes de la
+  // migracion 0003 y en lo que se siga creando sin capturarlo.
+  double? get latitud => getField<double>('latitud');
+  set latitud(double? value) => setField<double>('latitud', value);
+
+  double? get longitud => getField<double>('longitud');
+  set longitud(double? value) => setField<double>('longitud', value);
 }

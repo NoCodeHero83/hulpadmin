@@ -3,6 +3,7 @@ import '/backend/schema/structs/index.dart';
 import '/backend/supabase/supabase.dart';
 import '/components/item_widget.dart';
 import '/components/searchable_dropdown_widget.dart';
+import '/components/selector_ubicacion_widget.dart';
 import '/flutter_flow/flutter_flow_drop_down.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -694,6 +695,12 @@ class _CrearSolicitudWidgetState extends State<CrearSolicitudWidget> {
                                                   .direccionTextControllerValidator
                                                   .asValidator(context),
                                             ),
+                                          ),
+                                          SelectorUbicacionWidget(
+                                            direccionActual: () => _model
+                                                .direccionTextController.text,
+                                            onCambio: (punto) =>
+                                                _model.coordenadas = punto,
                                           ),
                                         ].divide(SizedBox(height: 8.0)),
                                       ),
@@ -1604,6 +1611,10 @@ class _CrearSolicitudWidgetState extends State<CrearSolicitudWidget> {
                                       'informacion_adicional':
                                           _model.notasTextController.text,
                                       'ciudad_id': _model.ciudadSeleccValue,
+                                      // Van juntas o no van: la restriccion
+                                      // de la tabla rechaza media coordenada.
+                                      'latitud': _model.coordenadas?.latitud,
+                                      'longitud': _model.coordenadas?.longitud,
                                     });
                                   } else {
                                     await SolicitudesServicioTable().insert({
@@ -1642,6 +1653,10 @@ class _CrearSolicitudWidgetState extends State<CrearSolicitudWidget> {
                                       'profesional_id':
                                           _model.proveedorSeleccionadoValue,
                                       'ciudad_id': _model.ciudadSeleccValue,
+                                      // Van juntas o no van: la restriccion
+                                      // de la tabla rechaza media coordenada.
+                                      'latitud': _model.coordenadas?.latitud,
+                                      'longitud': _model.coordenadas?.longitud,
                                     });
                                   }
 

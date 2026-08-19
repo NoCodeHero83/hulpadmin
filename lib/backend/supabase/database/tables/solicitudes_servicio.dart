@@ -94,4 +94,10 @@ class SolicitudesServicioRow extends SupabaseDataRow {
 
   String? get ciudadId => getField<String>('ciudad_id');
   set ciudadId(String? value) => setField<String>('ciudad_id', value);
+
+  double? get latitud => getField<double>('latitud');
+  set latitud(double? value) => setField<double>('latitud', value);
+
+  double? get longitud => getField<double>('longitud');
+  set longitud(double? value) => setField<double>('longitud', value);
 }

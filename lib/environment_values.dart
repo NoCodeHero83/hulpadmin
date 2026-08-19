@@ -61,6 +61,10 @@ class FFDevEnvironmentValues {
       _supabaseAnonKey = data['supabaseAnonKey'] ?? '';
       _integrityKey = data['integrityKey'] ?? '';
       _n8nWebhookUrl = data['n8nWebhookUrl'] ?? '';
+      // Opcional a proposito: sin clave la captura de ubicacion sigue
+      // funcionando (coordenadas pegadas a mano). Lo unico que se apaga es el
+      // mapa interactivo y el autocompletado de direcciones.
+      _googleMapsApiKey = data['googleMapsApiKey'] ?? '';
     } catch (e) {
       print('Error loading environment values: $e');
     }
@@ -86,4 +90,11 @@ class FFDevEnvironmentValues {
 
   String _n8nWebhookUrl = '';
   String get n8nWebhookUrl => _n8nWebhookUrl;
+
+  String _googleMapsApiKey = '';
+  String get googleMapsApiKey => _googleMapsApiKey;
+
+  /// Si el mapa interactivo y el autocompletado estan disponibles.
+  /// Toda la UI de ubicacion debe consultarlo antes de intentar pintar un mapa.
+  bool get tieneGoogleMaps => _googleMapsApiKey.isNotEmpty;
 }

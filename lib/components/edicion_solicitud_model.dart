@@ -7,6 +7,7 @@ import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
 import '/flutter_flow/form_field_controller.dart';
+import '/flutter_flow/ubicacion_helpers.dart';
 import 'dart:ui';
 import 'edicion_solicitud_widget.dart' show EdicionSolicitudWidget;
 import 'package:aligned_dialog/aligned_dialog.dart';
@@ -53,6 +54,9 @@ class EdicionSolicitudModel extends FlutterFlowModel<EdicionSolicitudWidget> {
   FocusNode? nombreFocusNode6;
   TextEditingController? nombreTextController6;
   String? Function(BuildContext, String?)? nombreTextController6Validator;
+  // Punto exacto de la solicitud. El selector lo siembra con lo que ya estaba
+  // guardado, asi que guardar sin tocarlo NO lo borra.
+  Coordenadas? coordenadas;
   // State field(s) for nombre widget.
   FocusNode? nombreFocusNode7;
   TextEditingController? nombreTextController7;

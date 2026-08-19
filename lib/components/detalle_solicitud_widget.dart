@@ -1,6 +1,7 @@
 import '/backend/supabase/supabase.dart';
 import '/components/chat_usuario_proveedor_widget.dart';
 import '/components/dropdown_solicitud_estado_widget.dart';
+import '/components/enlace_mapa_widget.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/custom_functions.dart' as functions;
 import '/flutter_flow/flutter_flow_util.dart';
@@ -2078,6 +2079,17 @@ class _DetalleSolicitudWidgetState extends State<DetalleSolicitudWidget> {
                                                   .nombreTextController7Validator
                                                   .asValidator(context),
                                             ),
+                                          ),
+                                          EnlaceMapaWidget(
+                                            latitud:
+                                                columnVwSolicitudesServiciosCompletaRow
+                                                    ?.latitud,
+                                            longitud:
+                                                columnVwSolicitudesServiciosCompletaRow
+                                                    ?.longitud,
+                                            direccion:
+                                                columnVwSolicitudesServiciosCompletaRow
+                                                    ?.ubicacion,
                                           ),
                                         ].divide(SizedBox(height: 8.0)),
                                       ),

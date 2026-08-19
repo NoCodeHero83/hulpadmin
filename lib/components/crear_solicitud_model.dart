@@ -6,6 +6,7 @@ import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
 import '/flutter_flow/form_field_controller.dart';
+import '/flutter_flow/ubicacion_helpers.dart';
 import 'dart:ui';
 import '/flutter_flow/custom_functions.dart' as functions;
 import '/index.dart';
@@ -62,6 +63,10 @@ class CrearSolicitudModel extends FlutterFlowModel<CrearSolicitudWidget> {
 
     return null;
   }
+
+  // Punto exacto de la solicitud. Nulo mientras no se capture: la direccion en
+  // texto sigue siendo obligatoria, la coordenada no.
+  Coordenadas? coordenadas;
 
   // State field(s) for preciobase widget.
   FocusNode? preciobaseFocusNode;

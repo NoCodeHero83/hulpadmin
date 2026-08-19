@@ -3,6 +3,7 @@ import '/backend/schema/structs/index.dart';
 import '/backend/supabase/supabase.dart';
 import '/components/item_widget.dart';
 import '/components/searchable_dropdown_widget.dart';
+import '/components/selector_ubicacion_widget.dart';
 import '/flutter_flow/custom_functions.dart' as functions;
 import '/components/dropdown_solicitud_estado_widget.dart';
 import '/flutter_flow/flutter_flow_drop_down.dart';
@@ -10,6 +11,7 @@ import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
 import '/flutter_flow/form_field_controller.dart';
+import '/flutter_flow/ubicacion_helpers.dart';
 import 'dart:ui';
 import 'package:aligned_dialog/aligned_dialog.dart';
 import 'package:flutter/foundation.dart';
@@ -2252,6 +2254,33 @@ class _EdicionSolicitudWidgetState extends State<EdicionSolicitudWidget> {
                                                   .asValidator(context),
                                             ),
                                           ),
+                                          SelectorUbicacionWidget(
+                                            // La clave amarra el estado del
+                                            // selector a ESTA solicitud: sin
+                                            // ella, al abrir otra el widget se
+                                            // reutiliza y conserva el punto de
+                                            // la anterior.
+                                            key: ValueKey(
+                                                'ubicacion_${widget!.solicitudId}'),
+                                            coordenadasIniciales: (columnVwSolicitudesServiciosCompletaRow
+                                                            ?.latitud !=
+                                                        null &&
+                                                    columnVwSolicitudesServiciosCompletaRow
+                                                            ?.longitud !=
+                                                        null)
+                                                ? Coordenadas(
+                                                    columnVwSolicitudesServiciosCompletaRow!
+                                                        .latitud!,
+                                                    columnVwSolicitudesServiciosCompletaRow
+                                                        .longitud!)
+                                                : null,
+                                            direccionActual: () => _model
+                                                    .nombreTextController6
+                                                    ?.text ??
+                                                '',
+                                            onCambio: (punto) =>
+                                                _model.coordenadas = punto,
+                                          ),
                                         ].divide(SizedBox(height: 8.0)),
                                       ),
                                     ),
@@ -3697,6 +3726,10 @@ class _EdicionSolicitudWidgetState extends State<EdicionSolicitudWidget> {
                                       data: {
                                         'ubicacion':
                                             _model.nombreTextController6.text,
+                                        'latitud':
+                                            _model.coordenadas?.latitud,
+                                        'longitud':
+                                            _model.coordenadas?.longitud,
                                         'fecha': supaSerialize<DateTime>(_model
                                                     .datePicked1 !=
                                                 null
@@ -3752,6 +3785,10 @@ class _EdicionSolicitudWidgetState extends State<EdicionSolicitudWidget> {
                                       data: {
                                         'ubicacion':
                                             _model.nombreTextController6.text,
+                                        'latitud':
+                                            _model.coordenadas?.latitud,
+                                        'longitud':
+                                            _model.coordenadas?.longitud,
                                         'fecha': supaSerialize<DateTime>(_model
                                                     .datePicked1 !=
                                                 null
