@@ -2280,6 +2280,10 @@ class _EdicionSolicitudWidgetState extends State<EdicionSolicitudWidget> {
                                                 '',
                                             onCambio: (punto) =>
                                                 _model.coordenadas = punto,
+                                            onDireccionSugerida: (valor) =>
+                                                safeSetState(() => _model
+                                                    .nombreTextController6
+                                                    ?.text = valor),
                                           ),
                                         ].divide(SizedBox(height: 8.0)),
                                       ),

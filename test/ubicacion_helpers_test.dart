@@ -96,6 +96,39 @@ void main() {
     });
   });
 
+  group('limpiarDireccion', () {
+    test('quita los niveles administrativos repetidos', () {
+      // Esto es literal de la geocodificación inversa de Google para un punto
+      // en Suba: repite Bogotá tres veces y D.C. dos.
+      expect(
+        limpiarDireccion(
+            'Cra. 58 # 128B-90, Suba, Bogotá, D.C., Bogotá, Bogotá, D.C., Colombia'),
+        'Cra. 58 # 128B-90, Suba, Bogotá, D.C., Colombia',
+      );
+    });
+
+    test('conserva la primera aparición, de lo concreto a lo general', () {
+      expect(limpiarDireccion('A, B, A, C'), 'A, B, C');
+    });
+
+    test('no altera una dirección que ya está limpia', () {
+      const limpia = 'Ak 15 & Cl. 93, Chapinero, Bogotá, Colombia';
+      expect(limpiarDireccion(limpia), limpia);
+    });
+
+    test('normaliza espacios y comas sueltas', () {
+      expect(limpiarDireccion('  Calle 1 ,, Bogotá ,  '), 'Calle 1, Bogotá');
+    });
+
+    test('los duplicados se detectan sin importar mayúsculas', () {
+      expect(limpiarDireccion('Bogotá, BOGOTÁ, Colombia'), 'Bogotá, Colombia');
+    });
+
+    test('con la cadena vacía no revienta', () {
+      expect(limpiarDireccion(''), '');
+    });
+  });
+
   group('urlGoogleMaps', () {
     test('con punto usa el punto', () {
       expect(

@@ -65,6 +65,10 @@ class FFDevEnvironmentValues {
       // funcionando (coordenadas pegadas a mano). Lo unico que se apaga es el
       // mapa interactivo y el autocompletado de direcciones.
       _googleMapsApiKey = data['googleMapsApiKey'] ?? '';
+      // Identificador de estilo de mapa creado en Google Cloud. Hace falta
+      // para los marcadores modernos; sin el, el mapa se pinta igual pero el
+      // marcador no aparece.
+      _googleMapsMapId = data['googleMapsMapId'] ?? '';
     } catch (e) {
       print('Error loading environment values: $e');
     }
@@ -93,6 +97,10 @@ class FFDevEnvironmentValues {
 
   String _googleMapsApiKey = '';
   String get googleMapsApiKey => _googleMapsApiKey;
+
+  String _googleMapsMapId = '';
+  String? get googleMapsMapId =>
+      _googleMapsMapId.isEmpty ? null : _googleMapsMapId;
 
   /// Si el mapa interactivo y el autocompletado estan disponibles.
   /// Toda la UI de ubicacion debe consultarlo antes de intentar pintar un mapa.

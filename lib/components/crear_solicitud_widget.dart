@@ -701,6 +701,14 @@ class _CrearSolicitudWidgetState extends State<CrearSolicitudWidget> {
                                                 .direccionTextController.text,
                                             onCambio: (punto) =>
                                                 _model.coordenadas = punto,
+                                            // Al fijar el punto se rellena la
+                                            // direccion con el nombre que le
+                                            // da Google, para que el texto y
+                                            // el punto no se contradigan.
+                                            onDireccionSugerida: (valor) =>
+                                                safeSetState(() => _model
+                                                    .direccionTextController
+                                                    ?.text = valor),
                                           ),
                                         ].divide(SizedBox(height: 8.0)),
                                       ),
