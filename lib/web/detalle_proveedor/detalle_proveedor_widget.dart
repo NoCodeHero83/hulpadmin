@@ -51,7 +51,9 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
   static const Color _labelGray = Color(0xFF4A4A4A);
   static const Color _valueGray = Color(0xFF606060);
   // REQ-002 v2.0.3: color de los labels de campo, fiel al diseño.
-  static const Color _labelBlue = Color(0xFF133CC2);
+  // Antes era un azul (#133CC2) que no esta en la paleta de Hulp.
+  static Color _labelColor(BuildContext c) =>
+      FlutterFlowTheme.of(c).primary;
 
   @override
   void initState() {
@@ -90,6 +92,68 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
   // certificaciones y los registros anteriores a la migracion) se devuelven
   // tal cual, asi que ambos formatos conviven sin ramas en el resto del codigo.
   final Map<String, String> _urlsFirmadas = {};
+
+  /// El nombre del archivo, sin la ruta ni los parametros de la URL firmada.
+  String _nombreArchivo(String? valor) {
+    if (valor == null || valor.isEmpty) return '—';
+    final sinQuery = valor.split('?').first;
+    final partes = sinQuery.split('/');
+    return partes.isEmpty ? valor : Uri.decodeComponent(partes.last);
+  }
+
+  /// Vista previa pequena del documento, para saber que se esta reemplazando
+  /// o borrando antes de hacerlo. Los PDF y ofimaticos no se pueden pintar:
+  /// para esos va un icono segun la extension.
+  Widget _miniatura(BuildContext ctx, String? valor) {
+    const lado = 44.0;
+    Widget marco(Widget hijo) => ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            width: lado,
+            height: lado,
+            color: const Color(0xFFEAEAEA),
+            child: hijo,
+          ),
+        );
+
+    if (valor == null || valor.isEmpty) {
+      return marco(Icon(Icons.description_outlined,
+          size: 20, color: FlutterFlowTheme.of(ctx).secondaryText));
+    }
+
+    final ext = _nombreArchivo(valor).split('.').last.toLowerCase();
+    const imagenes = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+    if (!imagenes.contains(ext)) {
+      final icono = ext == 'pdf'
+          ? Icons.picture_as_pdf_outlined
+          : (ext == 'xlsx' || ext == 'xls')
+              ? Icons.table_chart_outlined
+              : Icons.article_outlined;
+      return marco(
+          Icon(icono, size: 20, color: FlutterFlowTheme.of(ctx).secondary));
+    }
+
+    return marco(FutureBuilder<String?>(
+      future: _resolverUrl(valor),
+      builder: (_, snap) {
+        if (!snap.hasData || snap.data == null) {
+          return const Center(
+            child: SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          );
+        }
+        return Image.network(
+          snap.data!,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Icon(Icons.broken_image_outlined,
+              size: 20, color: FlutterFlowTheme.of(ctx).secondaryText),
+        );
+      },
+    ));
+  }
 
   Future<String?> _resolverUrl(String? valor) async {
     if (valor == null || valor.isEmpty) return null;
@@ -420,7 +484,7 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
                 fontSize: 13,
                 letterSpacing: 0,
                 fontWeight: FontWeight.w500,
-                color: _labelBlue,
+                color: _labelColor(ctx),
               ),
         ),
         const SizedBox(height: 6),
@@ -1510,31 +1574,69 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
           Widget regRow(String label, String? url, String campo, String folder,
               void Function(String?) set) {
             final cargado = url != null && url.isNotEmpty;
+            // Se ensena el documento que hay, no solo la palabra «cargado»:
+            // reemplazar o borrar sin ver que se esta tocando es como firmar
+            // a ciegas, y estos son documentos de identidad.
             return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '$label · ${cargado ? 'cargado' : 'no cargado'}',
-                      style: GoogleFonts.inter(fontSize: 14),
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: FlutterFlowTheme.of(ctx).secondaryBackground,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFE0E0E0)),
+                ),
+                child: Row(
+                  children: [
+                    _miniatura(ctx, url),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(label,
+                              style: GoogleFonts.inter(
+                                  fontSize: 14, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 2),
+                          Text(
+                            cargado
+                                ? _nombreArchivo(url)
+                                : 'Sin documento cargado',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: cargado
+                                  ? FlutterFlowTheme.of(ctx).secondaryText
+                                  : FlutterFlowTheme.of(ctx).error,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  TextButton(
-                    onPressed: busy
-                        ? null
-                        : () => subirRegistro(campo, folder, url, set),
-                    child: Text(cargado ? 'Reemplazar' : 'Subir'),
-                  ),
-                  if (cargado)
-                    IconButton(
-                      tooltip: 'Eliminar',
-                      onPressed:
-                          busy ? null : () => eliminarRegistro(campo, url, set),
-                      icon: Icon(Icons.delete_outline,
-                          size: 20, color: FlutterFlowTheme.of(ctx).error),
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        foregroundColor: FlutterFlowTheme.of(ctx).primary,
+                      ),
+                      onPressed: busy
+                          ? null
+                          : () => subirRegistro(campo, folder, url, set),
+                      child: Text(cargado ? 'Reemplazar' : 'Subir',
+                          style:
+                              GoogleFonts.inter(fontWeight: FontWeight.w600)),
                     ),
-                ],
+                    if (cargado)
+                      IconButton(
+                        tooltip: 'Eliminar',
+                        onPressed: busy
+                            ? null
+                            : () => eliminarRegistro(campo, url, set),
+                        icon: Icon(Icons.delete_outline,
+                            size: 20, color: FlutterFlowTheme.of(ctx).error),
+                      ),
+                  ],
+                ),
               ),
             );
           }
@@ -1569,6 +1671,51 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
                       ],
                     ),
                     const SizedBox(height: 4),
+                    // El progreso, arriba y no al final: es donde se mira
+                    // al pulsar, y con la lista larga el pie queda fuera de
+                    // la vista justo cuando hace falta.
+                    if (busy) ...[
+                      const SizedBox(height: 12),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: LinearProgressIndicator(
+                          value: progreso,
+                          minHeight: 8,
+                          backgroundColor: const Color(0xFFE0E0E0),
+                          color: FlutterFlowTheme.of(ctx).primary,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          SizedBox(
+                            width: 12,
+                            height: 12,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                  FlutterFlowTheme.of(ctx).primary),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              progreso == null
+                                  ? 'Procesando…'
+                                  : '${((progreso ?? 0) * 100).round()}% · $progresoTexto',
+                              style: FlutterFlowTheme.of(ctx).bodySmall.override(
+                                    font: GoogleFonts.inter(
+                                        fontWeight: FontWeight.w500),
+                                    fontSize: 12,
+                                    letterSpacing: 0,
+                                    color: FlutterFlowTheme.of(ctx).primary,
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                    ],
                     Text(formatosHint,
                         style: FlutterFlowTheme.of(ctx).bodySmall.override(
                               font: GoogleFonts.inter(),
@@ -1613,25 +1760,60 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
                               )
                             else
                               ...certs.map((c) => Padding(
-                                    padding: const EdgeInsets.only(bottom: 6),
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(c.entidadCertificadora,
-                                              style: GoogleFonts.inter(
-                                                  fontSize: 14)),
-                                        ),
-                                        IconButton(
-                                          tooltip: 'Eliminar',
-                                          onPressed: busy
-                                              ? null
-                                              : () => eliminarCert(c),
-                                          icon: Icon(Icons.delete_outline,
-                                              size: 20,
-                                              color: FlutterFlowTheme.of(ctx)
-                                                  .error),
-                                        ),
-                                      ],
+                                    padding: const EdgeInsets.only(bottom: 10),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: FlutterFlowTheme.of(ctx)
+                                            .secondaryBackground,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                            color: const Color(0xFFE0E0E0)),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          _miniatura(ctx, c.documentoUrl),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(c.entidadCertificadora,
+                                                    style: GoogleFonts.inter(
+                                                        fontSize: 14,
+                                                        fontWeight:
+                                                            FontWeight.w600)),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  _nombreArchivo(
+                                                      c.documentoUrl),
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: GoogleFonts.inter(
+                                                    fontSize: 12,
+                                                    color:
+                                                        FlutterFlowTheme.of(ctx)
+                                                            .secondaryText,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          IconButton(
+                                            tooltip: 'Eliminar',
+                                            onPressed: busy
+                                                ? null
+                                                : () => eliminarCert(c),
+                                            icon: Icon(Icons.delete_outline,
+                                                size: 20,
+                                                color: FlutterFlowTheme.of(ctx)
+                                                    .error),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   )),
                             const SizedBox(height: 8),
@@ -1647,10 +1829,22 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
                                 Padding(
                                   padding: const EdgeInsets.only(bottom: 2),
                                   child: OutlinedButton.icon(
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor:
+                                          FlutterFlowTheme.of(ctx).primary,
+                                      side: BorderSide(
+                                          color:
+                                              FlutterFlowTheme.of(ctx).primary),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
                                     onPressed: busy ? null : agregarCerts,
                                     icon: const Icon(Icons.upload_file_outlined,
                                         size: 18),
-                                    label: const Text('Subir'),
+                                    label: Text('Subir',
+                                        style: GoogleFonts.inter(
+                                            fontWeight: FontWeight.w600)),
                                   ),
                                 ),
                               ],
@@ -1671,28 +1865,6 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
                         ),
                       ),
                     ),
-                    if (progreso != null) ...[
-                      const SizedBox(height: 12),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: LinearProgressIndicator(
-                          value: progreso,
-                          minHeight: 8,
-                          backgroundColor: const Color(0xFFE0E0E0),
-                          color: FlutterFlowTheme.of(ctx).primary,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '${((progreso ?? 0) * 100).round()}% · $progresoTexto',
-                        style: FlutterFlowTheme.of(ctx).bodySmall.override(
-                              font: GoogleFonts.inter(),
-                              fontSize: 12,
-                              letterSpacing: 0,
-                              color: FlutterFlowTheme.of(ctx).secondaryText,
-                            ),
-                      ),
-                    ],
                     const SizedBox(height: 16),
                     Align(
                       alignment: Alignment.centerRight,
@@ -1743,7 +1915,7 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
                 fontSize: 13,
                 letterSpacing: 0,
                 fontWeight: FontWeight.w500,
-                color: _labelBlue,
+                color: _labelColor(context),
               ),
         ),
         const SizedBox(height: 2),
@@ -2579,7 +2751,7 @@ class _DetalleProveedorWidgetState extends State<DetalleProveedorWidget> {
                           fontSize: 13,
                           letterSpacing: 0,
                           fontWeight: FontWeight.w500,
-                          color: _labelBlue,
+                          color: _labelColor(ctx),
                         ),
                   ),
                   const SizedBox(height: 6),
