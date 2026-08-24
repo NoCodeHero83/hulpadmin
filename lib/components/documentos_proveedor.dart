@@ -154,12 +154,12 @@ class _TarjetaDocumentoState extends State<TarjetaDocumento> {
               widget.label,
               textAlign: TextAlign.center,
               style: tema.bodyMedium.override(
-                    font: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                    fontSize: 14,
-                    letterSpacing: 0,
-                    fontWeight: FontWeight.w600,
-                    color: tema.primary,
-                  ),
+                font: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                fontSize: 14,
+                letterSpacing: 0,
+                fontWeight: FontWeight.w600,
+                color: tema.primary,
+              ),
             ),
           ),
           const SizedBox(height: 8),
@@ -182,8 +182,7 @@ class _TarjetaDocumentoState extends State<TarjetaDocumento> {
                             if (resuelta == null) return placeholderPdf();
                             return Image.network(resuelta,
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) =>
-                                    placeholderPdf());
+                                errorBuilder: (_, __, ___) => placeholderPdf());
                           },
                         ),
             ),
@@ -196,11 +195,11 @@ class _TarjetaDocumentoState extends State<TarjetaDocumento> {
                   archivo,
                   overflow: TextOverflow.ellipsis,
                   style: tema.bodySmall.override(
-                        font: GoogleFonts.inter(),
-                        fontSize: 11,
-                        letterSpacing: 0,
-                        color: tema.secondaryText,
-                      ),
+                    font: GoogleFonts.inter(),
+                    fontSize: 11,
+                    letterSpacing: 0,
+                    color: tema.secondaryText,
+                  ),
                 ),
               ),
               const SizedBox(width: 4),
@@ -218,11 +217,11 @@ class _TarjetaDocumentoState extends State<TarjetaDocumento> {
                   child: Text(
                     'No cargado',
                     style: tema.bodySmall.override(
-                          font: GoogleFonts.inter(),
-                          fontSize: 11,
-                          letterSpacing: 0,
-                          color: tema.secondaryText,
-                        ),
+                      font: GoogleFonts.inter(),
+                      fontSize: 11,
+                      letterSpacing: 0,
+                      color: tema.secondaryText,
+                    ),
                   ),
                 ),
             ],
@@ -232,11 +231,11 @@ class _TarjetaDocumentoState extends State<TarjetaDocumento> {
             Text(
               'Subido el ${DateFormat('dd/MM/yyyy').format(widget.fechaSubida!)}',
               style: tema.bodySmall.override(
-                    font: GoogleFonts.inter(),
-                    fontSize: 11,
-                    letterSpacing: 0,
-                    color: tema.secondaryText,
-                  ),
+                font: GoogleFonts.inter(),
+                fontSize: 11,
+                letterSpacing: 0,
+                color: tema.secondaryText,
+              ),
             ),
           ],
           if (hayUrl) ...[
@@ -317,8 +316,7 @@ class _TarjetaDocumentoState extends State<TarjetaDocumento> {
         style: OutlinedButton.styleFrom(
           foregroundColor: tema.primary,
           side: BorderSide(color: tema.primary),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           padding: const EdgeInsets.symmetric(vertical: 8),
           textStyle: GoogleFonts.inter(fontSize: 13),
         ),
@@ -345,34 +343,41 @@ class SeccionVacia extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tema = FlutterFlowTheme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24),
-      child: Column(
-        children: [
-          Icon(icono, size: 40, color: tema.secondaryText),
-          const SizedBox(height: 10),
-          Text(
-            titulo,
-            textAlign: TextAlign.center,
-            style: tema.bodyMedium.override(
-                  font: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                  fontSize: 14,
-                  letterSpacing: 0,
-                  color: tema.primaryText,
-                ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            detalle,
-            textAlign: TextAlign.center,
-            style: tema.bodySmall.override(
-                  font: GoogleFonts.inter(),
-                  fontSize: 12,
-                  letterSpacing: 0,
-                  color: tema.secondaryText,
-                ),
-          ),
-        ],
+    // Ancho completo: sin esto la caja se encoge hasta el texto más largo, y
+    // si el padre la alinea a la izquierda el contenido queda centrado
+    // respecto a la caja y no respecto a la sección. Se notaba: «Referencias»
+    // salía desplazado frente a las otras dos secciones.
+    return SizedBox(
+      width: double.infinity,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Column(
+          children: [
+            Icon(icono, size: 40, color: tema.secondaryText),
+            const SizedBox(height: 10),
+            Text(
+              titulo,
+              textAlign: TextAlign.center,
+              style: tema.bodyMedium.override(
+                font: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                fontSize: 14,
+                letterSpacing: 0,
+                color: tema.primaryText,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              detalle,
+              textAlign: TextAlign.center,
+              style: tema.bodySmall.override(
+                font: GoogleFonts.inter(),
+                fontSize: 12,
+                letterSpacing: 0,
+                color: tema.secondaryText,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
