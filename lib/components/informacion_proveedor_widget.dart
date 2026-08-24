@@ -1,3 +1,4 @@
+import '/components/documentos_proveedor.dart';
 import '/backend/supabase/storage/storage.dart';
 import '/backend/supabase/supabase.dart';
 import '/flutter_flow/flutter_flow_drop_down.dart';
@@ -70,42 +71,12 @@ class _InformacionProveedorWidgetState
   // ── REQ-002 helpers ──────────────────────────────────────────────────────
 
   /// Extracts the filename from the last path segment of [url].
-  String _extractFilename(String? url) {
-    if (url == null || url.isEmpty) return 'Sin archivo';
-    try {
-      final segs = Uri.parse(url).pathSegments;
-      return segs.isNotEmpty ? segs.last : 'Sin archivo';
-    } catch (_) {
-      return 'Sin archivo';
-    }
-  }
 
   /// Returns true if [url] points to an image file (jpg/jpeg/png/webp).
-  bool _isImageUrl(String url) {
-    final ext =
-        url.toLowerCase().split('?').first.split('.').last;
-    return ['jpg', 'jpeg', 'png', 'webp'].contains(ext);
-  }
 
-  Widget _pdfPlaceholder() => Container(
-        color: const Color(0xFFEAEAEA),
-        child: const Center(
-          child: Icon(Icons.picture_as_pdf_outlined,
-              size: 40, color: Color(0xFFD32F2F)),
-        ),
-      );
 
-  Widget _emptyPlaceholder(BuildContext context) => Container(
-        color: const Color(0xFFEAEAEA),
-        child: Center(
-          child: Icon(Icons.insert_drive_file_outlined,
-              size: 40,
-              color: FlutterFlowTheme.of(context).secondaryText),
-        ),
-      );
 
   /// REQ-003: invisible spacer that holds a grid column slot.
-  Widget _buildEmptyColumn() => const Expanded(child: SizedBox());
 
   /// REQ-003: builds a row of up to 3 document cards with spacing.
   // Cedulas, cuentas bancarias y contratos viven en un bucket privado y se
@@ -113,247 +84,10 @@ class _InformacionProveedorWidgetState
   // valores que siguen siendo http se devuelven tal cual.
   final Map<String, String> _urlsFirmadas = {};
 
-  Future<String?> _resolverUrl(String? valor) async {
-    if (valor == null || valor.isEmpty) return null;
-    if (!isPrivateStoragePath(valor)) return valor;
-    final enCache = _urlsFirmadas[valor];
-    if (enCache != null) return enCache;
-    try {
-      final firmada = await signedUrlForPrivatePath(valor);
-      _urlsFirmadas[valor] = firmada;
-      return firmada;
-    } catch (_) {
-      return null;
-    }
-  }
 
   /// Empty slots at the end are filled with invisible Expanded spacers.
-  Widget _buildDocRow(List<Widget> expandedCards) {
-    assert(expandedCards.length <= 3);
-    final items = <Widget>[];
-    for (int i = 0; i < 3; i++) {
-      if (i > 0) items.add(const SizedBox(width: 12));
-      items.add(i < expandedCards.length
-          ? expandedCards[i]
-          : _buildEmptyColumn());
-    }
-    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: items);
-  }
 
   /// Builds a document card used in both Zona A (registro) and Zona B (certs).
-  Widget _buildDocumentCard(
-    BuildContext context, {
-    required String label,
-    required String? url,
-    required String downloadPrefix,
-    required String? proveedorId,
-    DateTime? uploadDate, // REQ-003: fecha de subida opcional
-  }) {
-    final docKey = '${downloadPrefix}_${proveedorId ?? 'x'}';
-    final isDownloading = _model.downloadingDocs[docKey] == true;
-    final hasUrl = url != null && url.isNotEmpty;
-    final filename = _extractFilename(url);
-
-    return Container(
-      constraints: const BoxConstraints(minWidth: 160),
-      decoration: BoxDecoration(
-        color: FlutterFlowTheme.of(context).secondaryBackground,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: FlutterFlowTheme.of(context).tertiary),
-        boxShadow: const [
-          BoxShadow(blurRadius: 4, color: Colors.black12, offset: Offset(0, 2))
-        ],
-      ),
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Label ─────────────────────────────
-          Center(
-            child: Text(
-              label,
-              textAlign: TextAlign.center,
-              style: FlutterFlowTheme.of(context).bodyMedium.override(
-                    font: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                    fontSize: 14,
-                    letterSpacing: 0,
-                    fontWeight: FontWeight.w600,
-                    color: FlutterFlowTheme.of(context).primary,
-                  ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          // ── Thumbnail ─────────────────────────
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: SizedBox(
-              height: 120,
-              width: double.infinity,
-              child: !hasUrl
-                  ? _emptyPlaceholder(context)
-                  : !_isImageUrl(url)
-                      ? _pdfPlaceholder()
-                      : FutureBuilder<String?>(
-                          future: _resolverUrl(url),
-                          builder: (context, snap) {
-                            if (snap.connectionState != ConnectionState.done) {
-                              return _emptyPlaceholder(context);
-                            }
-                            final resuelta = snap.data;
-                            if (resuelta == null) return _pdfPlaceholder();
-                            return Image.network(resuelta,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) =>
-                                    _pdfPlaceholder());
-                          },
-                        ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          // ── Filename row ──────────────────────
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  filename,
-                  overflow: TextOverflow.ellipsis,
-                  style: FlutterFlowTheme.of(context).bodySmall.override(
-                        font: GoogleFonts.inter(),
-                        fontSize: 11,
-                        letterSpacing: 0,
-                        color: FlutterFlowTheme.of(context).secondaryText,
-                      ),
-                ),
-              ),
-              const SizedBox(width: 4),
-              if (hasUrl)
-                const Icon(Icons.check_circle,
-                    size: 16, color: Color(0xFF43A047))
-              else
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE0E0E0),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    'No cargado',
-                    style: FlutterFlowTheme.of(context).bodySmall.override(
-                          font: GoogleFonts.inter(),
-                          fontSize: 11,
-                          letterSpacing: 0,
-                          color: FlutterFlowTheme.of(context).secondaryText,
-                        ),
-                  ),
-                ),
-            ],
-          ),
-          // ── Upload date (REQ-003) ──────────────────
-          if (uploadDate != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              'Subido el ${DateFormat('dd/MM/yyyy').format(uploadDate)}',
-              style: FlutterFlowTheme.of(context).bodySmall.override(
-                    font: GoogleFonts.inter(),
-                    fontSize: 11,
-                    letterSpacing: 0,
-                    color: FlutterFlowTheme.of(context).secondaryText,
-                  ),
-            ),
-          ],
-          // ── Action buttons (only when URL present) ──
-          if (hasUrl) ...[
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                icon: const Icon(Icons.remove_red_eye_outlined, size: 16),
-                label: const Text('Ver documento'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: FlutterFlowTheme.of(context).primary,
-                  side: BorderSide(
-                      color: FlutterFlowTheme.of(context).primary),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  textStyle: GoogleFonts.inter(fontSize: 13),
-                ),
-                onPressed: () async {
-                  try {
-                    final resuelta = await _resolverUrl(url);
-                    if (resuelta == null) {
-                      throw 'No se pudo acceder al documento';
-                    }
-                    await _model.openDocument(resuelta);
-                  } catch (_) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                        content: Text('No se pudo abrir el documento'),
-                      ));
-                    }
-                  }
-                },
-              ),
-            ),
-            const SizedBox(height: 6),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                icon: isDownloading
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.download_outlined, size: 16),
-                label:
-                    Text(isDownloading ? 'Descargando...' : 'Descargar'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: FlutterFlowTheme.of(context).primary,
-                  side: BorderSide(
-                      color: FlutterFlowTheme.of(context).primary),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  textStyle: GoogleFonts.inter(fontSize: 13),
-                ),
-                onPressed: isDownloading
-                    ? null
-                    : () async {
-                        final ext = filename.contains('.')
-                            ? filename.split('.').last
-                            : 'bin';
-                        final fileName =
-                            '${downloadPrefix}_${proveedorId ?? 'doc'}.$ext';
-                        safeSetState(
-                            () => _model.downloadingDocs[docKey] = true);
-                        try {
-                          final resuelta = await _resolverUrl(url);
-                          if (resuelta == null) {
-                            throw 'No se pudo acceder al documento';
-                          }
-                          await _model.downloadDocument(resuelta, fileName);
-                        } catch (e) {
-                          if (mounted) {
-                            final msg = e.toString().toLowerCase().contains('timeout')
-                                ? 'La descarga tardó demasiado. Intente nuevamente.'
-                                : 'Error al descargar el documento';
-                            ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(msg)));
-                          }
-                        } finally {
-                          safeSetState(
-                              () => _model.downloadingDocs[docKey] = false);
-                        }
-                      },
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
 
   // ── end REQ-002 helpers ───────────────────────────────────────────────────
 
@@ -2650,68 +2384,68 @@ class _InformacionProveedorWidgetState
                                         children: [
                                           if (cedula != null &&
                                               cedula.isNotEmpty) ...[
-                                            _buildDocumentCard(context,
+                                            TarjetaDocumento(
                                                 label: 'Cédula',
                                                 url: cedula,
-                                                downloadPrefix: 'cedula',
+                                                prefijoDescarga: 'cedula',
                                                 proveedorId:
                                                     widget.proveedorId,
-                                                uploadDate: uploadDate),
+                                                fechaSubida: uploadDate),
                                             const SizedBox(height: 12),
                                           ],
                                           if (cuenta != null &&
                                               cuenta.isNotEmpty) ...[
-                                            _buildDocumentCard(context,
+                                            TarjetaDocumento(
                                                 label: 'Cuenta bancaria',
                                                 url: cuenta,
-                                                downloadPrefix:
+                                                prefijoDescarga:
                                                     'cuenta_bancaria',
                                                 proveedorId:
                                                     widget.proveedorId,
-                                                uploadDate: uploadDate),
+                                                fechaSubida: uploadDate),
                                             const SizedBox(height: 12),
                                           ],
                                           if (contrato != null &&
                                               contrato.isNotEmpty)
-                                            _buildDocumentCard(context,
+                                            TarjetaDocumento(
                                                 label: 'Contrato',
                                                 url: contrato,
-                                                downloadPrefix: 'contrato',
+                                                prefijoDescarga: 'contrato',
                                                 proveedorId:
                                                     widget.proveedorId,
-                                                uploadDate: uploadDate),
+                                                fechaSubida: uploadDate),
                                         ],
                                       );
                                     }
                                     // Desktop: 3 columnas con slots invisibles
-                                    return _buildDocRow([
+                                    return filaDocumentos([
                                       if (cedula != null && cedula.isNotEmpty)
                                         Expanded(
-                                          child: _buildDocumentCard(context,
+                                          child: TarjetaDocumento(
                                               label: 'Cédula',
                                               url: cedula,
-                                              downloadPrefix: 'cedula',
+                                              prefijoDescarga: 'cedula',
                                               proveedorId: widget.proveedorId,
-                                              uploadDate: uploadDate),
+                                              fechaSubida: uploadDate),
                                         ),
                                       if (cuenta != null && cuenta.isNotEmpty)
                                         Expanded(
-                                          child: _buildDocumentCard(context,
+                                          child: TarjetaDocumento(
                                               label: 'Cuenta bancaria',
                                               url: cuenta,
-                                              downloadPrefix: 'cuenta_bancaria',
+                                              prefijoDescarga: 'cuenta_bancaria',
                                               proveedorId: widget.proveedorId,
-                                              uploadDate: uploadDate),
+                                              fechaSubida: uploadDate),
                                         ),
                                       if (contrato != null &&
                                           contrato.isNotEmpty)
                                         Expanded(
-                                          child: _buildDocumentCard(context,
+                                          child: TarjetaDocumento(
                                               label: 'Contrato',
                                               url: contrato,
-                                              downloadPrefix: 'contrato',
+                                              prefijoDescarga: 'contrato',
                                               proveedorId: widget.proveedorId,
-                                              uploadDate: uploadDate),
+                                              fechaSubida: uploadDate),
                                         ),
                                     ]);
                                   },
@@ -2825,14 +2559,13 @@ class _InformacionProveedorWidgetState
                                   for (int i = 0;
                                       i < validCerts.length;
                                       i++) {
-                                    mobileItems.add(_buildDocumentCard(
-                                      context,
+                                    mobileItems.add(TarjetaDocumento(
                                       label: validCerts[i]
                                           .entidadCertificadora,
                                       url: validCerts[i].documentoUrl,
-                                      downloadPrefix: 'certificacion',
+                                      prefijoDescarga: 'certificacion',
                                       proveedorId: validCerts[i].id,
-                                      uploadDate:
+                                      fechaSubida:
                                           validCerts[i].createdAt,
                                     ));
                                     if (i < validCerts.length - 1) {
@@ -2855,18 +2588,17 @@ class _InformacionProveedorWidgetState
                                   final slice = validCerts.sublist(
                                       i,
                                       min(i + 3, validCerts.length));
-                                  rows.add(_buildDocRow(
+                                  rows.add(filaDocumentos(
                                     slice
                                         .map((cert) => Expanded(
-                                              child: _buildDocumentCard(
-                                                context,
+                                              child: TarjetaDocumento(
                                                 label: cert
                                                     .entidadCertificadora,
                                                 url: cert.documentoUrl,
-                                                downloadPrefix:
+                                                prefijoDescarga:
                                                     'certificacion',
                                                 proveedorId: cert.id,
-                                                uploadDate:
+                                                fechaSubida:
                                                     cert.createdAt,
                                               ),
                                             ))
@@ -2891,23 +2623,18 @@ class _InformacionProveedorWidgetState
                                 0.0, 20.0, 0.0, 0.0),
                             child: Text(
                               'Referencias',
+                              // Mismo peso que «Certificaciones» y «Servicios
+                              // ofrecidos»: era el unico titulo de seccion en
+                              // gris pequeno y parecia una etiqueta suelta.
                               style: FlutterFlowTheme.of(context)
                                   .bodyMedium
                                   .override(
                                     font: GoogleFonts.inter(
-                                      fontWeight: FontWeight.normal,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .fontStyle,
-                                    ),
-                                    color:
-                                        FlutterFlowTheme.of(context).secondary,
-                                    fontSize: 14.0,
+                                        fontWeight: FontWeight.w600),
+                                    color: FlutterFlowTheme.of(context).primary,
+                                    fontSize: 16.0,
                                     letterSpacing: 0.0,
-                                    fontWeight: FontWeight.normal,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .bodyMedium
-                                        .fontStyle,
+                                    fontWeight: FontWeight.w600,
                                   ),
                             ),
                           ),
@@ -2937,6 +2664,20 @@ class _InformacionProveedorWidgetState
                             List<ReferenciasLaboralesRow>
                                 containerReferenciasLaboralesRowList =
                                 snapshot.data!;
+
+                            // Sin esto la sección se quedaba en blanco: un
+                            // List.generate de cero elementos no pinta nada,
+                            // así que el título quedaba solo. Las demás
+                            // secciones sí explicaban qué faltaba.
+                            if (containerReferenciasLaboralesRowList.isEmpty) {
+                              return const SeccionVacia(
+                                icono: Icons.people_outline,
+                                titulo:
+                                    'Este proveedor aún no tiene referencias registradas',
+                                detalle:
+                                    'Las referencias laborales aparecerán aquí una vez que el proveedor las cargue en la aplicación.',
+                              );
+                            }
 
                             return Container(
                               decoration: BoxDecoration(),
