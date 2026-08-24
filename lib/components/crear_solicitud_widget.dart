@@ -309,9 +309,10 @@ class _CrearSolicitudWidgetState extends State<CrearSolicitudWidget> {
                                     0.0, 24.0, 0.0, 0.0),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.max,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Flexible(
-                                      flex: 3,
+                                      flex: 5,
                                       child: Column(
                                         mainAxisSize: MainAxisSize.max,
                                         crossAxisAlignment:
@@ -342,9 +343,12 @@ class _CrearSolicitudWidgetState extends State<CrearSolicitudWidget> {
                                                 ),
                                           ),
                                           Container(
-                                            width: MediaQuery.sizeOf(context)
-                                                    .width *
-                                                1.0,
+                                            // Antes pedia el ancho entero de la
+                                            // pantalla dentro de una columna que
+                                            // ocupa la mitad: el Row lo recortaba
+                                            // igualmente, asi que solo servia
+                                            // para confundir.
+                                            width: double.infinity,
                                             child: TextFormField(
                                               controller: _model
                                                   .descripcionTextController,
@@ -352,6 +356,15 @@ class _CrearSolicitudWidgetState extends State<CrearSolicitudWidget> {
                                                   _model.descripcionFocusNode,
                                               autofocus: false,
                                               obscureText: false,
+                                              // Es lo que el proveedor lee para
+                                              // saber a que va: cabe mas de una
+                                              // linea y crece hasta seis.
+                                              minLines: 4,
+                                              maxLines: 6,
+                                              keyboardType:
+                                                  TextInputType.multiline,
+                                              textInputAction:
+                                                  TextInputAction.newline,
                                               decoration: InputDecoration(
                                                 isDense: true,
                                                 labelStyle:
