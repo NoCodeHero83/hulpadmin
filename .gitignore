@@ -65,3 +65,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Notas de trabajo con detalle de seguridad sin resolver.
+# Este repositorio es publico: no deben salir de esta maquina.
+docs/PENDIENTES.md
