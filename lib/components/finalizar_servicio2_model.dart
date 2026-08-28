@@ -37,6 +37,13 @@ class FinalizarServicio2Model
   // Stores action output result for [Backend Call - Query Rows] action in Button widget.
   List<UsuariosRow>? usuarioServicio33;
 
+  /// Profesional con el que se cierra la solicitud.
+  ///
+  /// Sale del que ya tenia asignado o, si no tenia, de lo que el
+  /// administrador elija en el selector. Nulo significa que se finaliza sin
+  /// profesional, que es una opcion valida y no un error.
+  String? profesionalResuelto;
+
   @override
   void initState(BuildContext context) {}
 

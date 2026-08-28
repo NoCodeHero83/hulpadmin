@@ -8,6 +8,7 @@ import '/flutter_flow/custom_functions.dart' as functions;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'seleccionar_profesional_widget.dart';
 import 'finalizar_servicio2_model.dart';
 export 'finalizar_servicio2_model.dart';
 
@@ -46,6 +47,51 @@ class _FinalizarServicio2WidgetState extends State<FinalizarServicio2Widget> {
     _model.maybeDispose();
 
     super.dispose();
+  }
+
+  void _avisar(String mensaje, {bool esError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          mensaje,
+          style: TextStyle(
+            color: FlutterFlowTheme.of(context).primaryBackground,
+          ),
+        ),
+        duration: Duration(milliseconds: 3000),
+        backgroundColor: esError
+            ? FlutterFlowTheme.of(context).error
+            : FlutterFlowTheme.of(context).primary,
+      ),
+    );
+  }
+
+  /// Resuelve con que profesional se cierra la solicitud.
+  ///
+  /// Si ya tiene uno asignado se respeta y no se molesta al administrador. Si
+  /// no lo tiene —lo que ocurre en toda solicitud cuyo proveedor fue dado de
+  /// baja, porque al borrarlo su `profesional_id` queda a nulo— se abre el
+  /// selector, que ademas permite finalizar sin asignar a nadie.
+  ///
+  /// Devuelve `false` si el administrador cancela: entonces no se finaliza.
+  Future<bool> _resolverProfesional(SolicitudesServicioRow solicitud) async {
+    final asignado = solicitud.profesionalId;
+    if (asignado != null && asignado.isNotEmpty) {
+      _model.profesionalResuelto = asignado;
+      return true;
+    }
+
+    if (!mounted) return false;
+    final seleccion = await mostrarSelectorDeProfesional(
+      context,
+      servicioId: solicitud.servicioId,
+      servicioNombre: solicitud.servicioNombre,
+    );
+    if (seleccion == null) return false;
+
+    _model.profesionalResuelto = seleccion.profesionalId;
+    return true;
   }
 
   @override
@@ -186,23 +232,23 @@ class _FinalizarServicio2WidgetState extends State<FinalizarServicio2Widget> {
                         ),
                       );
                       _shouldSetState = true;
-                      if (_model.validacion?.firstOrNull?.profesionalId ==
-                              null ||
-                          _model.validacion?.firstOrNull?.profesionalId == '') {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('No se puede finalizar: el servicio no tiene profesional asignado.'),
-                            duration: Duration(milliseconds: 4000),
-                            backgroundColor: FlutterFlowTheme.of(context).secondary,
-                          ),
+                      final solicitudConPago = _model.validacion?.firstOrNull;
+                      if (solicitudConPago == null) {
+                        _avisar(
+                          'No se encontro la solicitud. Recarga la pagina e intentalo de nuevo.',
+                          esError: true,
                         );
                         if (_shouldSetState) safeSetState(() {});
                         return;
-                      } else {
+                      }
+                      if (!await _resolverProfesional(solicitudConPago)) {
+                        if (_shouldSetState) safeSetState(() {});
+                        return;
+                      }
+                      {
                         await SolicitudesServicioTable().update(
                           data: {
-                            'profesional_id':
-                                _model.validacion?.firstOrNull?.profesionalId,
+                            'profesional_id': _model.profesionalResuelto,
                           },
                           matchingRows: (rows) => rows.eqOrNull(
                             'id',
@@ -303,8 +349,8 @@ class _FinalizarServicio2WidgetState extends State<FinalizarServicio2Widget> {
                                 await SolicitudesServicioTable().update(
                                   data: {
                                     'estado': 'finalizadas',
-                                    'profesional_id': _model
-                                        .validacion?.firstOrNull?.profesionalId,
+                                    'profesional_id':
+                                        _model.profesionalResuelto,
                                     'estado_pago': 'pagado',
                                   },
                                   matchingRows: (rows) => rows.eqOrNull(
@@ -577,8 +623,8 @@ class _FinalizarServicio2WidgetState extends State<FinalizarServicio2Widget> {
                                 await SolicitudesServicioTable().update(
                                   data: {
                                     'estado': 'finalizadas',
-                                    'profesional_id': _model
-                                        .validacion?.firstOrNull?.profesionalId,
+                                    'profesional_id':
+                                        _model.profesionalResuelto,
                                     'estado_pago': 'pagado',
                                   },
                                   matchingRows: (rows) => rows.eqOrNull(
@@ -803,7 +849,6 @@ class _FinalizarServicio2WidgetState extends State<FinalizarServicio2Widget> {
                   padding: EdgeInsetsDirectional.fromSTEB(0.0, 14.0, 0.0, 0.0),
                   child: FFButtonWidget(
                     onPressed: () async {
-                      var _shouldSetState = false;
                       _model.validacion25 =
                           await SolicitudesServicioTable().queryRows(
                         queryFn: (q) => q.eqOrNull(
@@ -811,108 +856,88 @@ class _FinalizarServicio2WidgetState extends State<FinalizarServicio2Widget> {
                           widget!.servicioId,
                         ),
                       );
-                      _shouldSetState = true;
-                      if (_model.validacion25?.firstOrNull?.profesionalId ==
-                              null ||
-                          _model.validacion25?.firstOrNull?.profesionalId ==
-                              '') {
-                        if (_shouldSetState) safeSetState(() {});
-                        return;
-                      } else {
-                        await SolicitudesServicioTable().update(
-                          data: {
-                            'profesional_id':
-                                _model.validacion25?.firstOrNull?.profesionalId,
-                          },
-                          matchingRows: (rows) => rows.eqOrNull(
-                            'id',
-                            widget!.servicioId,
-                          ),
+                      safeSetState(() {});
+
+                      final solicitud = _model.validacion25?.firstOrNull;
+                      if (solicitud == null) {
+                        _avisar(
+                          'No se encontro la solicitud. Recarga la pagina e intentalo de nuevo.',
+                          esError: true,
                         );
-                        _model.usuarioServicio33 =
-                            await UsuariosTable().queryRows(
-                          queryFn: (q) => q.eqOrNull(
-                            'id',
-                            _model.validacion25?.firstOrNull?.usuarioId,
-                          ),
-                        );
-                        _shouldSetState = true;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'finalizado',
-                              style: TextStyle(
-                                color: FlutterFlowTheme.of(context)
-                                    .primaryBackground,
-                              ),
-                            ),
-                            duration: Duration(milliseconds: 2000),
-                            backgroundColor:
-                                FlutterFlowTheme.of(context).primary,
-                          ),
-                        );
-                        await SolicitudesServicioTable().update(
-                          data: {
-                            'estado': 'finalizadas',
-                            'profesional_id':
-                                _model.validacion25?.firstOrNull?.profesionalId,
-                            'estado_pago': 'pagado',
-                          },
-                          matchingRows: (rows) => rows.eqOrNull(
-                            'id',
-                            widget!.servicioId,
-                          ),
-                        );
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'finalizado 2',
-                              style: TextStyle(
-                                color: FlutterFlowTheme.of(context)
-                                    .primaryBackground,
-                              ),
-                            ),
-                            duration: Duration(milliseconds: 2000),
-                            backgroundColor:
-                                FlutterFlowTheme.of(context).primary,
-                          ),
-                        );
-                        await TransaccionesTable().insert({
-                          'solicitud_id': _model.validacion25?.firstOrNull?.id,
-                          'usuario_id':
-                              _model.usuarioServicio33?.firstOrNull?.id,
-                          'monto': valueOrDefault<double>(
-                            _model.validacion25?.firstOrNull?.precio,
-                            0.0,
-                          ),
-                          'moneda': 'COP',
-                          'proveedor_pago': 'QR',
-                          'fecha_pago':
-                              supaSerialize<DateTime>(getCurrentTimestamp),
-                          'fecha_registro':
-                              supaSerialize<DateTime>(getCurrentTimestamp),
-                          'metodo_pago': 'QR',
-                        });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'finalizado 3',
-                              style: TextStyle(
-                                color: FlutterFlowTheme.of(context)
-                                    .primaryBackground,
-                              ),
-                            ),
-                            duration: Duration(milliseconds: 2000),
-                            backgroundColor:
-                                FlutterFlowTheme.of(context).primary,
-                          ),
-                        );
-                        Navigator.pop(context);
-                        if (_shouldSetState) safeSetState(() {});
                         return;
                       }
 
-                      if (_shouldSetState) safeSetState(() {});
+                      // Antes, si la solicitud no tenia profesional, aqui
+                      // habia un `return` mudo: el boton no hacia nada y no
+                      // decia por que. Ahora se ofrece elegir uno, o
+                      // finalizar sin ninguno.
+                      if (!await _resolverProfesional(solicitud)) return;
+                      final profesionalId = _model.profesionalResuelto;
+
+                      await SolicitudesServicioTable().update(
+                        data: {
+                          'estado': 'finalizadas',
+                          'profesional_id': profesionalId,
+                          'estado_pago': 'pagado',
+                        },
+                        matchingRows: (rows) => rows.eqOrNull(
+                          'id',
+                          widget!.servicioId,
+                        ),
+                      );
+
+                      _model.usuarioServicio33 =
+                          await UsuariosTable().queryRows(
+                        queryFn: (q) => q.eqOrNull(
+                          'id',
+                          solicitud.usuarioId,
+                        ),
+                      );
+                      safeSetState(() {});
+
+                      final clienteId =
+                          _model.usuarioServicio33?.firstOrNull?.id;
+                      if (clienteId == null) {
+                        // La solicitud ya quedo finalizada; lo unico que falta
+                        // es el asiento contable, y sin cliente la insercion
+                        // violaria el NOT NULL de usuario_id.
+                        _avisar(
+                          'Servicio finalizado, pero no se pudo registrar la transaccion: '
+                          'la solicitud no tiene cliente asociado.',
+                          esError: true,
+                        );
+                        Navigator.pop(context);
+                        return;
+                      }
+
+                      await TransaccionesTable().insert({
+                        'solicitud_id': solicitud.id,
+                        'usuario_id': clienteId,
+                        // Misma formula que los otros dos cierres de este
+                        // mismo dialogo: el precio vigente es precio_base
+                        // —precio solo se escribe al crear la solicitud— y
+                        // encima van los adicionales.
+                        'monto': valueOrDefault<double>(
+                              solicitud.precioBase,
+                              valueOrDefault<double>(solicitud.precio, 0.0),
+                            ) +
+                            valueOrDefault<double>(
+                              solicitud.precioAdicionales,
+                              0.0,
+                            ),
+                        'moneda': 'COP',
+                        'proveedor_pago': 'QR',
+                        'fecha_pago':
+                            supaSerialize<DateTime>(getCurrentTimestamp),
+                        'fecha_registro':
+                            supaSerialize<DateTime>(getCurrentTimestamp),
+                        'metodo_pago': 'QR',
+                      });
+
+                      _avisar(profesionalId == null
+                          ? 'Servicio finalizado sin profesional asignado.'
+                          : 'Servicio finalizado y profesional asignado.');
+                      Navigator.pop(context);
                     },
                     text: 'Finalizar servicio sin metodos de pago',
                     options: FFButtonOptions(
