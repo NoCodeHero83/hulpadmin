@@ -258,6 +258,10 @@ class _Proveedores2WidgetState extends State<Proveedores2Widget> {
                                             'categoria_id',
                                             widget!.categoriaid,
                                           )
+                                          .eqOrNull(
+                                            'verificado',
+                                            'verificado',
+                                          )
                                           .ilike(
                                             'nombres',
                                             '%${_model.textFieldbuscarTextController.text}%',
@@ -818,6 +822,13 @@ class _Proveedores2WidgetState extends State<Proveedores2Widget> {
                                                         .map((item) =>
                                                             VwProfesionalesCompletoRow(
                                                                 item))
+                                                        // Solo los aprobados:
+                                                        // la vista trae todos
+                                                        // los proveedores sea
+                                                        // cual sea su estado.
+                                                        .where((fila) =>
+                                                            fila.verificado ==
+                                                            'verificado')
                                                         .toList()),
                                             builder: (context, snapshot) {
                                               // Customize what your widget looks like when it's loading.
